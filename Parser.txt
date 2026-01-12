@@ -1,0 +1,116 @@
+﻿extends Node
+
+var data_rows = []
+
+func _ready():
+	parse_csv()
+	print_example_usage()
+
+func parse_csv():
+	data_rows.clear()
+	
+	var file = FileAccess.open("res://Data/csv/Demo Story Copy - Demo.csv", FileAccess.READ)
+	if file == null:
+		push_error("Failed to open CSV file")
+		return
+	
+	var csv_text = file.get_as_text()
+	file.close()
+	
+	var lines = csv_text.split("\n")
+	
+	# Start from row 5 (index 5) where actual data begins
+	for i in range(5, lines.size()):
+		var line = lines[i].strip_edges()
+		if line.is_empty():
+			continue
+			
+		var row = parse_csv_line(line)
+		
+		# Skip rows that don't have enough columns
+		if row.size() < 18:
+			continue
+		
+		var row_data = {
+			"lineid": row[0],
+			"Name": row[1],
+			"text": row[2],
+			"character": row[3],
+			"left": row[4],
+			"middle_left": row[5],
+			"middle": row[6],
+			"middle_right": row[7],
+			"right": row[8],
+			"scene_properties": row[9],
+			"dialogue_choice": row[10],
+			"next_line_properties": row[11],
+			"give_item": row[12],
+			"chapter": row[13],
+			"goto": row[14],
+			"special_effect": row[15],
+			"sound_effect": row[16],
+			"music_effect": row[17]
+		}
+
+		data_rows.append(row_data)
+
+# Properly parse CSV line handling quoted fields with commas
+func parse_csv_line(line: String) -> Array:
+	var result = []
+	var current_field = ""
+	var in_quotes = false
+	var i = 0
+	
+	while i < line.length():
+		var c = line[i]
+		
+		if c == '"':
+			if in_quotes and i + 1 < line.length() and line[i + 1] == '"':
+				# Escaped quote ("") -> add single quote
+				current_field += '"'
+				i += 1
+			else:
+				# Toggle quote state
+				in_quotes = !in_quotes
+		elif c == ',' and !in_quotes:
+			# End of field
+			result.append(current_field)
+			current_field = ""
+		else:
+			current_field += c
+		
+		i += 1
+	
+	# Don't forget the last field
+	result.append(current_field)
+	
+	return result
+
+func print_example_usage():
+	print("=== CSV Parsing Example Output ===")
+	print("Total rows parsed: ", data_rows.size())
+	print()
+
+	for i in range(min(3, data_rows.size())):  # Print first 3 rows as example
+		print("--- Row ", i + 1, " ---")
+		var row_data = data_rows[i]
+		print("Line ID: ", row_data["lineid"])
+		print("Name: ", row_data["Name"])
+		print("Text: ", row_data["text"])
+		print("Character: ", row_data["character"])
+		print("Left: ", row_data["left"])
+		print("Middle Left: ", row_data["middle_left"])
+		print("Middle: ", row_data["middle"])
+		print("Middle Right: ", row_data["middle_right"])
+		print("Right: ", row_data["right"])
+		print("Scene Properties: ", row_data["scene_properties"])
+		print("Dialogue Choice: ", row_data["dialogue_choice"])
+		print("Next Line Properties: ", row_data["next_line_properties"])
+		print("Give Item: ", row_data["give_item"])
+		print("Chapter: ", row_data["chapter"])
+		print("Goto: ", row_data["goto"])
+		print("Special Effect: ", row_data["special_effect"])
+		print("Sound Effect: ", row_data["sound_effect"])
+		print("Music Effect: ", row_data["music_effect"])
+		print()
+	
