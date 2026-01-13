@@ -61,6 +61,11 @@ unique_name_in_owner = true
 layout_mode = 2
 text = "Browse"
 
+[node name="LoadChaptersButton" type="Button" parent="Panel/VBoxContainer/FileSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Load Chapters"
+
 [node name="OutputSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
@@ -86,6 +91,40 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 text = "Generate JSON"
+
+[node name="ChapterFilterContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="ChapterLabel" type="Label" parent="Panel/VBoxContainer/ChapterFilterContainer"]
+layout_mode = 2
+text = "Select Chapters to Export:"
+
+[node name="ChapterButtons" type="HBoxContainer" parent="Panel/VBoxContainer/ChapterFilterContainer"]
+layout_mode = 2
+
+[node name="SelectAllButton" type="Button" parent="Panel/VBoxContainer/ChapterFilterContainer/ChapterButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Select All"
+
+[node name="DeselectAllButton" type="Button" parent="Panel/VBoxContainer/ChapterFilterContainer/ChapterButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Deselect All"
+
+[node name="ChapterScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/ChapterFilterContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 150)
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ChapterCheckboxContainer" type="VBoxContainer" parent="Panel/VBoxContainer/ChapterFilterContainer/ChapterScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
 
 [node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -123,4 +162,3 @@ ok_button_text = "Save"
 file_mode = 4
 access = 2
 filters = PackedStringArray("*.json ; JSON Files")
-

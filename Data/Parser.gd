@@ -1,6 +1,7 @@
 extends Node
 
 var data_rows = {}  # Dictionary untuk menyimpan data
+var available_chapters = []  # Array untuk menyimpan daftar chapter ID yang tersedia
 
 func _ready():
 	pass
@@ -62,7 +63,17 @@ func parse_csv_from_path(file_path: String) -> bool:
 			data_rows[chapter] = {}
 		data_rows[chapter][lineid] = row_data
 	
+	# Perbarui daftar chapter yang tersedia
+	update_available_chapters()
+	
 	return true
+
+## Fungsi untuk memperbarui daftar chapter yang tersedia
+func update_available_chapters():
+	available_chapters.clear()
+	for chapter in data_rows.keys():
+		if not available_chapters.has(chapter):
+			available_chapters.append(chapter)
 
 ## Fungsi memecah teks string dengan koma menjadi Array
 func parse_array_field(field: String) -> Array:
@@ -181,3 +192,18 @@ func print_example_usage():
 			line_count += 1
 		count += 1
 	
+
+## Fungsi untuk mendapatkan daftar chapter ID yang tersedia
+func get_available_chapters() -> Array:
+	return available_chapters
+
+## Fungsi untuk mendapatkan data berdasarkan chapter yang dipilih
+func get_filtered_data(selected_chapters: Array) -> Dictionary:
+	if selected_chapters.is_empty():
+		return data_rows
+	
+	var filtered = {}
+	for chapter in selected_chapters:
+		if data_rows.has(chapter):
+			filtered[chapter] = data_rows[chapter]
+	return filtered
