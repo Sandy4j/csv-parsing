@@ -3,16 +3,16 @@ extends Node
 var data_rows = {}  # Dictionary untuk menyimpan data
 
 func _ready():
-	parse_csv()
-	#print_example_usage()
+	pass
 
-func parse_csv():
+## Parse CSV dari path yang diberikan
+func parse_csv_from_path(file_path: String) -> bool:
 	data_rows.clear()
 	
-	var file = FileAccess.open("res://Data/csv/Demo Story Copy - Demo.csv", FileAccess.READ)
+	var file = FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
-		push_error("Failed to open CSV file")
-		return
+		push_error("Failed to open CSV file: " + file_path)
+		return false
 	
 	var csv_text = file.get_as_text()
 	file.close()
@@ -61,6 +61,8 @@ func parse_csv():
 		if not data_rows.has(chapter):
 			data_rows[chapter] = {}
 		data_rows[chapter][lineid] = row_data
+	
+	return true
 
 ## Fungsi memecah teks string dengan koma menjadi Array
 func parse_array_field(field: String) -> Array:

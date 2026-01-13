@@ -1,7 +1,5 @@
 extends Node
 
-var parser: Node
-
 # Definisikan urutan key untuk menyimpan data ke JSON
 const KEY_ORDER = [
 	"lineid",
@@ -25,28 +23,28 @@ const KEY_ORDER = [
 ]
 
 func _ready() -> void:
-	parser = get_node("/root/Parser")
-	# Tunggu sampai proses parsing selesai
-	await get_tree().process_frame
-	generate_json()
+	pass
 
-func generate_json() -> void:
-	if parser == null or parser.data_rows.is_empty():
-		push_error("Parser data not available")
-		return
+## Generate JSON dari data yang diberikan ke output path yang ditentukan
+func generate_json_to_path(data: Dictionary, output_path: String) -> String:
+	if data.is_empty():
+		push_error("Data is empty")
+		return ""
 	
 	# Buat string JSON dengan urutan key yang ditentukan
-	var json_string = stringify_order(parser.data_rows)
+	var json_string = stringify_order(data)
 	
-	var file = FileAccess.open("res://Data/json/output.json", FileAccess.WRITE)
+	var file = FileAccess.open(output_path, FileAccess.WRITE)
 	if file == null:
-		push_error("Failed to create JSON file")
-		return
+		push_error("Failed to create JSON file: " + output_path)
+		return ""
 		
 	# Menyimpan teks JSON ke file
 	file.store_string(json_string)
 	file.close()
-	print("JSON file generated successfully at res://Data/json/output.json")
+	print("JSON file generated successfully at " + output_path)
+	
+	return json_string
 
 ## Fungsi untuk menghasilkan string JSON dengan urutan key yang ditentukan
 func stringify_order(data: Dictionary) -> String:

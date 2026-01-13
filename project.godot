@@ -8,18 +8,12 @@
 
 config_version=5
 
-"ï»¿config_version"=5
-
 [application]
 
 config/name="CSV Parsing"
-run/main_scene="uid://u8aejwcqiwwu"
+run/main_scene="uid://difp7pg6nbaii"
 config/features=PackedStringArray("4.5", "Mobile")
 config/icon="res://icon.svg"
-
-[autoload]
-
-Parser="*res://Parser.gd"
 
 [rendering]
 

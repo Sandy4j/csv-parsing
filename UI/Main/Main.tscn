@@ -1,0 +1,126 @@
+[gd_scene load_steps=2 format=3 uid="uid://difp7pg6nbaii"]
+
+[ext_resource type="Script" uid="uid://ts3y3svbmnrk" path="res://UI/Main/Main.gd" id="1_ggmuk"]
+
+[node name="MainUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_ggmuk")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "CSV to JSON Converter"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="FileSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="FilePathLabel" type="Label" parent="Panel/VBoxContainer/FileSection"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "CSV File:"
+
+[node name="FilePathEdit" type="LineEdit" parent="Panel/VBoxContainer/FileSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Select CSV file..."
+editable = false
+
+[node name="BrowseButton" type="Button" parent="Panel/VBoxContainer/FileSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Browse"
+
+[node name="OutputSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="OutputLabel" type="Label" parent="Panel/VBoxContainer/OutputSection"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+text = "Output JSON:"
+
+[node name="OutputPathEdit" type="LineEdit" parent="Panel/VBoxContainer/OutputSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Select output location..."
+editable = false
+
+[node name="OutputBrowseButton" type="Button" parent="Panel/VBoxContainer/OutputSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Browse"
+
+[node name="GenerateButton" type="Button" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+text = "Generate JSON"
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Status: Ready"
+
+[node name="OutputLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "JSON Output:"
+
+[node name="JsonOutput" type="TextEdit" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+editable = false
+wrap_mode = 1
+
+[node name="FileDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Open a File"
+size = Vector2i(600, 400)
+ok_button_text = "Open"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.csv ; CSV Files")
+
+[node name="OutputFileDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Save JSON File"
+size = Vector2i(600, 400)
+ok_button_text = "Save"
+file_mode = 4
+access = 2
+filters = PackedStringArray("*.json ; JSON Files")
+
