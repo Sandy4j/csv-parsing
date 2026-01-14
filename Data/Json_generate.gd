@@ -26,13 +26,13 @@ func _ready() -> void:
 	pass
 
 ## Generate JSON dari data yang diberikan ke output path yang ditentukan
-func generate_json_to_path(data: Dictionary, output_path: String) -> String:
+func generate_json_to_path(data: Dictionary, output_path: String, root_name: String = "MainStory") -> String:
 	if data.is_empty():
 		push_error("Data is empty")
 		return ""
 	
 	# Buat string JSON dengan urutan key yang ditentukan
-	var json_string = stringify_order(data)
+	var json_string = stringify_order(data, root_name)
 	
 	var file = FileAccess.open(output_path, FileAccess.WRITE)
 	if file == null:
@@ -47,10 +47,10 @@ func generate_json_to_path(data: Dictionary, output_path: String) -> String:
 	return json_string
 
 ## Fungsi untuk menghasilkan string JSON dengan urutan key yang ditentukan
-func stringify_order(data: Dictionary) -> String:
+func stringify_order(data: Dictionary, root_name: String = "DefaultRoot") -> String:
 	var lines = []
 	lines.append("{")
-	lines.append("\t\"MainStory\": {")
+	lines.append("\t\"%s\": {" % root_name)
 	
 	# Menulis key-value untuk setiap chapter
 	var chapter_keys = data.keys()

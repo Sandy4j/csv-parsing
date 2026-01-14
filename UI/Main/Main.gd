@@ -5,6 +5,7 @@ extends Control
 @onready var browse_button: Button = %BrowseButton
 @onready var output_path_edit: LineEdit = %OutputPathEdit
 @onready var output_browse_button: Button = %OutputBrowseButton
+@onready var root_name_edit: LineEdit = %RootNameEdit
 @onready var generate_button: Button = %GenerateButton
 @onready var status_label: Label = %StatusLabel
 @onready var json_output: TextEdit = %JsonOutput
@@ -177,8 +178,13 @@ func _on_generate_pressed() -> void:
 	
 	update_status("Generating JSON...")
 	
+	# Ambil root name dari input user atau gunakan default
+	var root_name = root_name_edit.text.strip_edges()
+	if root_name.is_empty():
+		root_name = "DefaultRoot"
+	
 	# Generate JSON menggunakan Json_generate.gd
-	var json_string = json_generator.generate_json_to_path(data_to_export, output_path)
+	var json_string = json_generator.generate_json_to_path(data_to_export, output_path, root_name)
 	if json_string.is_empty():
 		update_status("Error: Failed to generate JSON")
 		return
