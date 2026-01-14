@@ -8,7 +8,6 @@ extends Control
 @onready var root_name_edit: LineEdit = %RootNameEdit
 @onready var generate_button: Button = %GenerateButton
 @onready var status_label: Label = %StatusLabel
-@onready var json_output: TextEdit = %JsonOutput
 @onready var file_dialog: FileDialog = %FileDialog
 @onready var output_file_dialog: FileDialog = %OutputFileDialog
 
@@ -19,6 +18,7 @@ extends Control
 @onready var select_all_button: Button = %SelectAllButton
 @onready var deselect_all_button: Button = %DeselectAllButton
 @onready var chapter_filter_container: VBoxContainer = %ChapterFilterContainer
+@onready var open_json_viewer_button: Button = %OpenJsonViewerButton
 
 # Referensi ke script Parser dan JsonGenerate
 var parser: Node
@@ -47,6 +47,7 @@ func _connect_signals() -> void:
 	load_chapters_button.pressed.connect(_on_load_chapters_pressed)
 	select_all_button.pressed.connect(_on_select_all_pressed)
 	deselect_all_button.pressed.connect(_on_deselect_all_pressed)
+	open_json_viewer_button.pressed.connect(_on_open_json_viewer_pressed)
 
 func _on_browse_pressed() -> void:
 	file_dialog.popup_centered()
@@ -189,10 +190,11 @@ func _on_generate_pressed() -> void:
 		update_status("Error: Failed to generate JSON")
 		return
 	
-	# Tampilkan output JSON
-	json_output.text = json_string
 	var chapter_count = data_to_export.size()
 	update_status("Success! Exported %d chapters to: %s" % [chapter_count, output_path])
 
 func update_status(message: String) -> void:
 	status_label.text = "Status: " + message
+
+func _on_open_json_viewer_pressed() -> void:
+	get_tree().change_scene_to_file("res://UI/JSON UI/Json UI.tscn")

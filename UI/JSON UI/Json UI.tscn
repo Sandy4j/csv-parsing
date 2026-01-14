@@ -1,0 +1,129 @@
+[gd_scene load_steps=2 format=3 uid="uid://c15ayqtecbjxy"]
+
+[ext_resource type="Script" uid="uid://dvbp2ql2g0v5p" path="res://UI/JSON UI/JsonUI.gd" id="1_json"]
+
+[node name="JsonViewerUI" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_json")
+
+[node name="Panel" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBoxContainer" type="VBoxContainer" parent="Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_constants/separation = 10
+
+[node name="HeaderContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="BackButton" type="Button" parent="Panel/VBoxContainer/HeaderContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "← Back"
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer/HeaderContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "JSON UI"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="FileSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="FilePathLabel" type="Label" parent="Panel/VBoxContainer/FileSection"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "JSON File:"
+
+[node name="FilePathEdit" type="LineEdit" parent="Panel/VBoxContainer/FileSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Select JSON file..."
+editable = false
+
+[node name="BrowseButton" type="Button" parent="Panel/VBoxContainer/FileSection"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Browse"
+
+[node name="SearchSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="SearchLabel" type="Label" parent="Panel/VBoxContainer/SearchSection"]
+custom_minimum_size = Vector2(80, 0)
+layout_mode = 2
+text = "Search:"
+
+[node name="SearchEdit" type="LineEdit" parent="Panel/VBoxContainer/SearchSection"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+placeholder_text = "Type to filter..."
+clear_button_enabled = true
+
+[node name="ControlButtons" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="ExpandAllButton" type="Button" parent="Panel/VBoxContainer/ControlButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Expand All"
+
+[node name="CollapseAllButton" type="Button" parent="Panel/VBoxContainer/ControlButtons"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Collapse All"
+
+[node name="HSeparator2" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="TreeLabel" type="Label" parent="Panel/VBoxContainer"]
+layout_mode = 2
+text = "JSON Structure:"
+
+[node name="JsonTree" type="Tree" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_vertical = 3
+allow_reselect = true
+
+[node name="HSeparator3" type="HSeparator" parent="Panel/VBoxContainer"]
+layout_mode = 2
+
+[node name="StatusLabel" type="Label" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+text = "Status: Ready"
+
+[node name="FileDialog" type="FileDialog" parent="."]
+unique_name_in_owner = true
+title = "Open a File"
+size = Vector2i(600, 400)
+ok_button_text = "Open"
+file_mode = 0
+access = 2
+filters = PackedStringArray("*.json ; JSON Files")

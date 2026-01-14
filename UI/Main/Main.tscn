@@ -100,11 +100,23 @@ layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Type root name..."
 
-[node name="GenerateButton" type="Button" parent="Panel/VBoxContainer"]
+[node name="ButtonsContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="GenerateButton" type="Button" parent="Panel/VBoxContainer/ButtonsContainer"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Generate JSON"
+
+[node name="OpenJsonViewerButton" type="Button" parent="Panel/VBoxContainer/ButtonsContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Open JSON Viewer"
 
 [node name="ChapterFilterContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
 unique_name_in_owner = true
@@ -130,7 +142,7 @@ text = "Deselect All"
 
 [node name="ChapterScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/ChapterFilterContainer"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 150)
+custom_minimum_size = Vector2(0, 350)
 layout_mode = 2
 size_flags_vertical = 3
 
@@ -147,17 +159,6 @@ layout_mode = 2
 unique_name_in_owner = true
 layout_mode = 2
 text = "Status: Ready"
-
-[node name="OutputLabel" type="Label" parent="Panel/VBoxContainer"]
-layout_mode = 2
-text = "JSON Output:"
-
-[node name="JsonOutput" type="TextEdit" parent="Panel/VBoxContainer"]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_vertical = 3
-editable = false
-wrap_mode = 1
 
 [node name="FileDialog" type="FileDialog" parent="."]
 unique_name_in_owner = true
