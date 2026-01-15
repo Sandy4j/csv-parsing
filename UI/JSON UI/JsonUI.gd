@@ -10,10 +10,38 @@ extends Control
 @onready var collapse_all_button: Button = %CollapseAllButton
 @onready var back_button: Button = %BackButton
 @onready var search_edit: LineEdit = %SearchEdit
+@onready var save_button: Button = %SaveButton
+@onready var edit_popup: PopupPanel = %EditPopup
+@onready var edit_value_edit: LineEdit = %EditValueEdit
+@onready var edit_type_label: Label = %EditTypeLabel
+@onready var edit_confirm_button: Button = %EditConfirmButton
+@onready var edit_cancel_button: Button = %EditCancelButton
+@onready var container_popup: PopupPanel = %ContainerPopup
+@onready var container_type_label: Label = %ContainerTypeLabel
+@onready var add_key_edit: LineEdit = %AddKeyEdit
+@onready var add_value_edit: LineEdit = %AddValueEdit
+@onready var add_value_type_option: OptionButton = %AddValueTypeOption
+@onready var add_button: Button = %AddButton
+@onready var delete_button: Button = %DeleteButton
+@onready var container_cancel_button: Button = %ContainerCancelButton
 
 var current_json_data: Variant = null
+var current_file_path: String = ""
+var json_editor: JsonEditor = null
+var tree_handler: JsonTree = null
+
+# Untuk tracking item yang sedang diedit
+var _editing_item: TreeItem = null
+var _editing_path: Array = []
+var _editing_original_type: String = ""
+var _container_item: TreeItem = null
+var _container_path: Array = []
+var _container_is_array: bool = false
 
 func _ready() -> void:
+	json_editor = JsonEditor.new()
+	tree_handler = JsonTree.new()
+	tree_handler.init(json_tree)
 	_connect_signals()
 	update_status("Ready - Select JSON file to view")
 
@@ -24,12 +52,23 @@ func _connect_signals() -> void:
 	collapse_all_button.pressed.connect(_on_collapse_all_pressed)
 	back_button.pressed.connect(_on_back_pressed)
 	search_edit.text_changed.connect(_on_search_text_changed)
+	save_button.pressed.connect(_on_save_pressed)
+	json_tree.item_activated.connect(_on_tree_item_activated)
+	edit_confirm_button.pressed.connect(_on_edit_confirm_pressed)
+	edit_cancel_button.pressed.connect(_on_edit_cancel_pressed)
+	edit_value_edit.text_submitted.connect(_on_edit_value_submitted)
+	json_editor.json_saved.connect(_on_json_saved)
+	json_editor.save_failed.connect(_on_save_failed)
+	add_button.pressed.connect(_on_add_button_pressed)
+	delete_button.pressed.connect(_on_delete_button_pressed)
+	container_cancel_button.pressed.connect(_on_container_cancel_pressed)
 
 func _on_browse_pressed() -> void:
 	file_dialog.popup_centered()
 
 func _on_file_selected(path: String) -> void:
 	file_path_edit.text = path
+	current_file_path = path
 	_load_json_file(path)
 
 ## Load file JSON dari path yang diberikan
@@ -53,122 +92,20 @@ func _load_json_file(path: String) -> void:
 		return
 	
 	current_json_data = json.data
-	_build_tree(current_json_data)
-	update_status("Loaded: " + path.get_file())
-
-## Buat tree dari data yang diberikan
-func _build_tree(data: Variant, filter_text: String = "") -> void:
-	json_tree.clear()
-	
-	var root = json_tree.create_item()
-	root.set_text(0, "JSON Root")
-	
-	# Cek apakah data adalah dictionary atau array
-	if data is Dictionary:
-		for key in data.keys():
-			_add_tree_items(root, data[key], str(key), filter_text)
-	elif data is Array:
-		for i in range(data.size()):
-			_add_tree_items(root, data[i], "[%d]" % i, filter_text)
-	else:
-		_add_tree_items(root, data, "value", filter_text)
-	
-	# Expand root secara default
-	root.set_collapsed(false)
-
-## Menambahkan item baru untuk setiap item di data ke visual tree
-func _add_tree_items(parent: TreeItem, data: Variant, key: String, filter_text: String = "") -> TreeItem:
-	var item = json_tree.create_item(parent)
-	var should_show = filter_text.is_empty()
-	
-	# Check apakah item adalah dictionary atau array
-	if data is Dictionary:
-		var dict_size = data.size()
-		item.set_text(0, "%s {%d}" % [key, dict_size])
-		item.set_collapsed(true)
-		
-		# Rekursif untuk menambahkan item baru untuk setiap item di dictionary
-		for dict_key in data.keys():
-			var child_item = _add_tree_items(item, data[dict_key], str(dict_key), filter_text)
-			if child_item != null and not filter_text.is_empty():
-				should_show = true
-		
-	elif data is Array:
-		var arr_size = data.size()
-		item.set_text(0, "%s [%d]" % [key, arr_size])
-		item.set_collapsed(true)
-		
-		# rekursif untuk menambahkan item baru untuk setiap item di array
-		for i in range(data.size()):
-			var child_item = _add_tree_items(item, data[i], "[%d]" % i, filter_text)
-			if child_item != null and not filter_text.is_empty():
-				should_show = true
-		
-	else:
-		# Item adalah nilai dasar
-		var value_str = _format_value(data)
-		var display_text = "%s: %s" % [key, value_str]
-		item.set_text(0, display_text)
-		
-		# Cek apakah item harus ditampilkan
-		if not filter_text.is_empty():
-			if filter_text.to_lower() in display_text.to_lower():
-				should_show = true
-	
-	# Handle sistem filter
-	if not filter_text.is_empty() and not should_show:
-		item.free()
-		return null
-	
-	return item
-
-## Fungsi untuk mengatur format nilai untuk menampilkan ke visual tree
-func _format_value(value: Variant) -> String:
-	if value == null:
-		return "null"
-	elif value is String:
-		# Mengatur limit karakter untuk string
-		if value.length() > 100:
-			return '"%s..."' % value.substr(0, 100)
-		return '"%s"' % value
-	elif value is bool:
-		return "true" if value else "false"
-	else:
-		return str(value)
-
-## GET tipe data dari nilai
-func _get_value_type(value: Variant) -> String:
-	if value == null:
-		return "null"
-	elif value is String:
-		return "string"
-	elif value is bool:
-		return "bool"
-	elif value is int or value is float:
-		return "number"
-	else:
-		return "unknown"
+	current_file_path = path
+	json_editor.init(current_json_data, current_file_path)
+	tree_handler.set_data(current_json_data)
+	tree_handler.build_tree(current_json_data)
+	update_status("Loaded: " + path.get_file() + " (Double-click to edit values)")
 
 ## Fungsi expand/collapse semua item di tree
 func _on_expand_all_pressed() -> void:
-	_set_all_collapsed(false)
+	tree_handler.expand_all()
 	update_status("All nodes expanded")
 func _on_collapse_all_pressed() -> void:
-	_set_all_collapsed(true)
+	tree_handler.collapse_all()
 	update_status("All nodes collapsed")
 
-## Fungsi untuk mengatur semua item di tree menjadi collapsed atau expanded
-func _set_all_collapsed(collapsed: bool) -> void:
-	var root = json_tree.get_root()
-	if root == null:
-		return
-	_set_item_collapsed_recursive(root, collapsed)
-func _set_item_collapsed_recursive(item: TreeItem, collapsed: bool) -> void:
-	item.set_collapsed(collapsed)
-	var child = item.get_first_child()
-	while child != null:
-		_set_item_collapsed_recursive(child, collapsed)
-		child = child.get_next()
 
 ## Kembail ke Main UI
 func _on_back_pressed() -> void:
@@ -179,12 +116,217 @@ func _on_search_text_changed(new_text: String) -> void:
 	if current_json_data == null:
 		return
 	if new_text.is_empty():
-		_build_tree(current_json_data)
+		tree_handler.build_tree(current_json_data)
 		update_status("Filter cleared")
 	else:
-		_build_tree(current_json_data, new_text)
+		tree_handler.build_tree(current_json_data, new_text)
 		update_status("Filtering: " + new_text)
 
 ## Update status label di UI
 func update_status(message: String) -> void:
 	status_label.text = "Status: " + message
+
+## Handler untuk double-click pada tree item (mulai edit)
+func _on_tree_item_activated() -> void:
+	var selected = json_tree.get_selected()
+	if selected == null:
+		return
+	
+	var item_path = selected.get_metadata(0)
+	if item_path == null:
+		item_path = []
+	
+	# Cek apakah item adalah container (dict/array)
+	var current_value = json_editor.get_value_at_path(item_path)
+	
+	if current_value is Dictionary:
+		_show_container_popup(selected, false)
+		return
+	elif current_value is Array:
+		_show_container_popup(selected, true)
+		return
+	
+	# Cek apakah item bisa diedit (hanya value primitif)
+	if not selected.has_meta("is_editable") or not selected.get_meta("is_editable"):
+		update_status("Cannot edit this item")
+		return
+	
+	_editing_item = selected
+	_editing_path = item_path
+	_editing_original_type = selected.get_meta("value_type")
+	
+	# Dapatkan value saat ini (sudah di cek di atas)
+	var value_str = JsonTree.value_to_edit_string(current_value)
+	
+	# Setup popup edit
+	edit_type_label.text = "Type: " + _editing_original_type
+	edit_value_edit.text = value_str
+	edit_value_edit.select_all()
+	
+	# Tampilkan popup
+	edit_popup.popup_centered()
+	edit_value_edit.grab_focus()
+
+## Konfirmasi edit value
+func _on_edit_confirm_pressed() -> void:
+	_apply_edit()
+
+## Handler untuk submit value dengan Enter
+func _on_edit_value_submitted(_new_text: String) -> void:
+	_apply_edit()
+
+## Apply perubahan edit
+func _apply_edit() -> void:
+	if _editing_item == null:
+		edit_popup.hide()
+		return
+	
+	var new_value_str = edit_value_edit.text
+	var new_value = JsonEditor.parse_value_string(new_value_str, _editing_original_type)
+	
+	# Update via JsonEditor
+	if json_editor.edit_value(_editing_path, new_value):
+		# Rebuild tree untuk menampilkan perubahan
+		current_json_data = json_editor.get_data()
+		tree_handler.build_tree(current_json_data)
+		update_status("Value updated (unsaved)")
+	else:
+		update_status("Error: Failed to update value")
+	
+	_editing_item = null
+	_editing_path = []
+	edit_popup.hide()
+
+## Batal edit
+func _on_edit_cancel_pressed() -> void:
+	_editing_item = null
+	_editing_path = []
+	edit_popup.hide()
+	update_status("Edit cancelled")
+
+## Save JSON ke file
+func _on_save_pressed() -> void:
+	if current_file_path.is_empty():
+		update_status("Error: No file loaded")
+		return
+	
+	if not json_editor.has_unsaved_changes():
+		update_status("No changes to save")
+		return
+	
+	json_editor.save_to_file()
+
+## Callback saat JSON berhasil disimpan
+func _on_json_saved(path: String) -> void:
+	update_status("Saved: " + path.get_file())
+
+## Callback saat save gagal
+func _on_save_failed(error: String) -> void:
+	update_status("Save Error: " + error)
+
+## Handler untuk tombol Add di container popup
+func _on_add_button_pressed() -> void:
+	if _container_item == null:
+		return
+	
+	var new_value_str = add_value_edit.text.strip_edges()
+	var new_value_type = add_value_type_option.get_selected_id()
+	var new_value: Variant = null
+	
+	# Tentukan nilai baru berdasarkan tipe yang dipilih
+	match new_value_type:
+		0: # String
+			new_value = new_value_str
+		1: # Number (int/float)
+			if new_value_str.is_valid_int():
+				new_value = new_value_str.to_int()
+			elif new_value_str.is_valid_float():
+				new_value = new_value_str.to_float()
+			else:
+				new_value = 0
+		2: # Boolean
+			new_value = new_value_str.to_lower() == "true"
+		3: # Null
+			new_value = null
+		4: # Empty Dict
+			new_value = {}
+		5: # Empty Array
+			new_value = []
+		_:
+			update_status("Error: Invalid type selected")
+			return
+	
+	# Tambahkan item baru ke JSON
+	if _container_is_array:
+		# Untuk array, tidak perlu key
+		if json_editor.add_to_array(_container_path, new_value):
+			update_status("Item added (unsaved)")
+			current_json_data = json_editor.get_data()
+			tree_handler.build_tree(current_json_data)
+			container_popup.hide()
+		else:
+			update_status("Error: Failed to add item")
+	else:
+		# Untuk dictionary, perlu key
+		var new_key = add_key_edit.text.strip_edges()
+		if new_key.is_empty():
+			update_status("Error: Key cannot be empty")
+			return
+		if json_editor.add_to_dict(_container_path, new_key, new_value):
+			update_status("Item added (unsaved)")
+			current_json_data = json_editor.get_data()
+			tree_handler.build_tree(current_json_data)
+			container_popup.hide()
+		else:
+			update_status("Error: Failed to add item")
+
+## Handler untuk tombol Delete di container popup
+func _on_delete_button_pressed() -> void:
+	if _container_path.is_empty():
+		update_status("Error: Cannot delete root")
+		container_popup.hide()
+		return
+	
+	# Hapus container dari parent
+	if json_editor.delete_from_parent(_container_path):
+		update_status("Item deleted (unsaved)")
+		current_json_data = json_editor.get_data()
+		tree_handler.build_tree(current_json_data)
+		container_popup.hide()
+	else:
+		update_status("Error: Failed to delete item")
+
+## Fungsi untuk menampilkan popup add/delete container
+func _show_container_popup(item: TreeItem, is_array: bool) -> void:
+	_container_item = item
+	_container_path = item.get_metadata(0)
+	if _container_path == null:
+		_container_path = []
+	_container_is_array = is_array
+	
+	# Setup popup fields
+	if is_array:
+		container_type_label.text = "Array Options"
+		add_key_edit.hide()
+	else:
+		container_type_label.text = "Dictionary Options"
+		add_key_edit.show()
+		add_key_edit.clear()
+	
+	add_value_edit.clear()
+	add_value_type_option.clear()
+	add_value_type_option.add_item("String", 0)
+	add_value_type_option.add_item("Number", 1)
+	add_value_type_option.add_item("Boolean", 2)
+	add_value_type_option.add_item("Null", 3)
+	add_value_type_option.add_item("Empty Object {}", 4)
+	add_value_type_option.add_item("Empty Array []", 5)
+	add_value_type_option.select(0)
+	
+	container_popup.popup_centered()
+
+## Handler untuk cancel container popup
+func _on_container_cancel_pressed() -> void:
+	_container_item = null
+	_container_path = []
+	container_popup.hide()
