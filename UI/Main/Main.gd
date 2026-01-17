@@ -1,5 +1,7 @@
 extends Control
 
+## Main UI Controller - Mengelola alur kerja CSV to JSON conversion
+
 # Referensi UI
 @onready var file_path_edit: LineEdit = %FilePathEdit
 @onready var browse_button: Button = %BrowseButton
@@ -11,7 +13,6 @@ extends Control
 @onready var file_dialog: FileDialog = %FileDialog
 @onready var output_file_dialog: FileDialog = %OutputFileDialog
 
-# Referensi UI untuk Chapter Filter
 @onready var load_chapters_button: Button = %LoadChaptersButton
 @onready var chapter_scroll_container: ScrollContainer = %ChapterScrollContainer
 @onready var chapter_checkbox_container: VBoxContainer = %ChapterCheckboxContainer
@@ -20,181 +21,180 @@ extends Control
 @onready var chapter_filter_container: VBoxContainer = %ChapterFilterContainer
 @onready var open_json_viewer_button: Button = %OpenJsonViewerButton
 
-# Referensi ke script Parser dan JsonGenerate
+# Preload scripts
+const CSVParserScript = preload("res://Data/Parser.gd")
+const JSONGeneratorScript = preload("res://Data/Json_generate.gd")
+
+# Core components
 var parser: Node
 var json_generator: Node
-var selected_chapters: Array = []
-var chapter_checkboxes: Array = []
+var Group_Manager: GroupManager
+var current_csv_type: CSVConfig.CSVType = CSVConfig.CSVType.DIALOG
+
 
 func _ready() -> void:
-	parser = preload("res://Data/Parser.gd").new()
-	json_generator = preload("res://Data/Json_generate.gd").new()
+	_init_components()
+	_connect_signals()
+	_update_status("Ready - Select CSV file and output location")
+	chapter_filter_container.visible = false
+func _init_components() -> void:
+	parser = CSVParserScript.new()
+	json_generator = JSONGeneratorScript.new()
 	add_child(parser)
 	add_child(json_generator)
-	
-	_connect_signals()
-	update_status("Ready - Select CSV file and output location")
-	
-	# Sembunyikan chapter filter sampai CSV di-load
-	chapter_filter_container.visible = false
+	Group_Manager = GroupManager.new(chapter_checkbox_container)
+	Group_Manager.selection_changed.connect(_on_filter_selection_changed)
+
 
 func _connect_signals() -> void:
 	browse_button.pressed.connect(_on_browse_pressed)
 	output_browse_button.pressed.connect(_on_output_browse_pressed)
-	generate_button.pressed.connect(_on_generate_pressed)
 	file_dialog.file_selected.connect(_on_file_selected)
 	output_file_dialog.file_selected.connect(_on_output_file_selected)
 	load_chapters_button.pressed.connect(_on_load_chapters_pressed)
-	select_all_button.pressed.connect(_on_select_all_pressed)
-	deselect_all_button.pressed.connect(_on_deselect_all_pressed)
+	generate_button.pressed.connect(_on_generate_pressed)
 	open_json_viewer_button.pressed.connect(_on_open_json_viewer_pressed)
+	select_all_button.pressed.connect(Group_Manager.select_all)
+	deselect_all_button.pressed.connect(Group_Manager.deselect_all)
 
 func _on_browse_pressed() -> void:
 	file_dialog.popup_centered()
-
 func _on_output_browse_pressed() -> void:
 	output_file_dialog.popup_centered()
-
 func _on_file_selected(path: String) -> void:
 	file_path_edit.text = path
-	# Reset chapter filter saat file baru dipilih
-	_clear_chapter_checkboxes()
-	selected_chapters.clear()
-	chapter_filter_container.visible = false
-	update_status("CSV file selected. Click 'Load Chapters' to see available chapters.")
-
+	_reset_chapter_filter()
+	_update_status("CSV file selected. Click 'Load Chapters' to see available groups.")
 func _on_output_file_selected(path: String) -> void:
-	# Pastikan path berakhiran .json
 	if not path.ends_with(".json"):
 		path += ".json"
 	output_path_edit.text = path
 
+## Funcitons untuk mengelola filter chapters
 func _on_load_chapters_pressed() -> void:
 	var csv_path = file_path_edit.text.strip_edges()
 	
 	if csv_path.is_empty():
-		update_status("Error: Please select a CSV file first")
+		_update_status("Error: Please select a CSV file first")
 		return
 	
-	update_status("Loading chapters from CSV...")
+	_detect_and_configure(csv_path)
+	_update_status("Loading groups from CSV...")
 	
-	# Parse CSV untuk mendapatkan daftar chapter
-	var parse_success = parser.parse_csv_from_path(csv_path)
-	if not parse_success:
-		update_status("Error: Failed to parse CSV file")
+	# Parse CSV
+	if not parser.parse_csv_from_path(csv_path):
+		_update_status("Error: Failed to parse CSV file")
 		return
 	
-	# Ambil daftar chapter yang tersedia
-	var chapters = parser.get_available_chapters()
+	# Dapatkan groups yang tersedia
+	var groups = parser.get_available_groups()
 	
-	if chapters.is_empty():
-		update_status("No chapters found in CSV file")
+	if groups.is_empty():
+		_update_status("No groups found in CSV file (flat data mode)")
+		chapter_filter_container.visible = false
 		return
 	
-	# Tampilkan chapter filter
+	# Populate filter
 	chapter_filter_container.visible = true
+	Group_Manager.populate(groups)
 	
-	# bersihkan checkbox
-	_clear_chapter_checkboxes()
-	
-	# Buat checkbox untuk setiap chapter
-	for chapter in chapters:
-		var checkbox = CheckBox.new()
-		checkbox.text = chapter
-		checkbox.button_pressed = true
-		checkbox.toggled.connect(_on_checkbox_toggled.bind(chapter))
-		chapter_checkbox_container.add_child(checkbox)
-		chapter_checkboxes.append(checkbox)
-		selected_chapters.append(chapter)
-	
-	update_status("Found %d chapters. Click on chapters to select/deselect." % chapters.size())
+	var group_label = CSVConfig.get_group_label(current_csv_type)
+	_update_status("Found %d %s. Click to select/deselect." % [groups.size(), group_label])
 
-func _clear_chapter_checkboxes() -> void:
-	for checkbox in chapter_checkboxes:
-		checkbox.queue_free()
-	chapter_checkboxes.clear()
+## Callback saat filter diubah
+func _on_filter_selection_changed(selected: Array) -> void:
+	var total = Group_Manager.get_total_count()
+	var count = Group_Manager.get_selected_count()
+	var group_label = CSVConfig.get_group_label(current_csv_type)
+	_update_status("Selected %d/%d %s" % [count, total, group_label])
+func _reset_chapter_filter() -> void:
+	Group_Manager.clear()
+	chapter_filter_container.visible = false
 
-func _on_checkbox_toggled(toggled_on: bool, chapter_name: String) -> void:
-	if toggled_on:
-		if not selected_chapters.has(chapter_name):
-			selected_chapters.append(chapter_name)
-	else:
-		selected_chapters.erase(chapter_name)
-	
-	_update_selection_status()
 
-func _on_select_all_pressed() -> void:
-	selected_chapters.clear()
-	for checkbox in chapter_checkboxes:
-		checkbox.toggled.disconnect(_on_checkbox_toggled.bind(checkbox.text))
-		checkbox.button_pressed = true
-		checkbox.toggled.connect(_on_checkbox_toggled.bind(checkbox.text))
-		selected_chapters.append(checkbox.text)
-	_update_selection_status()
 
-func _on_deselect_all_pressed() -> void:
-	for checkbox in chapter_checkboxes:
-		checkbox.toggled.disconnect(_on_checkbox_toggled.bind(checkbox.text))
-		checkbox.button_pressed = false
-		checkbox.toggled.connect(_on_checkbox_toggled.bind(checkbox.text))
-	selected_chapters.clear()
-	_update_selection_status()
-
-func _update_selection_status() -> void:
-	var total = chapter_checkboxes.size()
-	var selected = selected_chapters.size()
-	update_status("Selected %d/%d chapters" % [selected, total])
-
+## Fungsi utama untuk generate JSON dari CSV
 func _on_generate_pressed() -> void:
 	var csv_path = file_path_edit.text.strip_edges()
 	var output_path = output_path_edit.text.strip_edges()
 	
-	# Validasi input
-	if csv_path.is_empty():
-		update_status("Error: Please select a CSV file")
+	if not _validate_paths(csv_path, output_path):
 		return
 	
-	if output_path.is_empty():
-		update_status("Error: Please select output JSON location")
-		return
-	
-	# Pastikan nama file berakhiran .json
 	if not output_path.ends_with(".json"):
 		output_path += ".json"
 	
-	update_status("Parsing CSV...")
+	_detect_and_configure(csv_path)
+	_update_status("Parsing CSV...")
 	
-	# Parse CSV menggunakan Parser.gd
-	var parse_success = parser.parse_csv_from_path(csv_path)
-	if not parse_success:
-		update_status("Error: Failed to parse CSV file")
+	# Parse
+	if not parser.parse_csv_from_path(csv_path):
+		_update_status("Error: Failed to parse CSV file")
 		return
 	
-	# Ambil data yang sudah difilter berdasarkan chapter yang dipilih
-	var data_to_export = parser.get_filtered_data(selected_chapters)
-	
+	# Get data
+	var data_to_export = _get_export_data()
 	if data_to_export.is_empty():
-		update_status("Error: No data to export. Please select at least one chapter.")
+		_update_status("Error: No data to export.")
 		return
 	
-	update_status("Generating JSON...")
+	# Generate JSON
+	_update_status("Generating JSON...")
+	_apply_root_name()
 	
-	# Ambil root name dari input user atau gunakan default
+	var json_string = json_generator.generate_json_to_path(data_to_export, output_path)
+	if json_string.is_empty():
+		_update_status("Error: Failed to generate JSON")
+		return
+	
+	# Success
+	var group_label = CSVConfig.get_group_label(current_csv_type)
+	_update_status("Success! Exported %d %s to: %s" % [data_to_export.size(), group_label, output_path])
+
+## Validasi path input
+func _validate_paths(csv_path: String, output_path: String) -> bool:
+	if csv_path.is_empty():
+		_update_status("Error: Please select a CSV file")
+		return false
+	
+	if output_path.is_empty():
+		_update_status("Error: Please select output JSON location")
+		return false
+	
+	return true
+
+## Dapatkan data yang akan diexport dari CSV
+func _get_export_data() -> Dictionary:
+	var selected = Group_Manager.get_selected()
+	var data = parser.get_filtered_data(selected)
+	
+	if data.is_empty():
+		data = parser.get_data()
+	
+	return data
+
+
+func _apply_root_name() -> void:
 	var root_name = root_name_edit.text.strip_edges()
 	if root_name.is_empty():
-		root_name = "DefaultRoot"
-	
-	# Generate JSON menggunakan Json_generate.gd
-	var json_string = json_generator.generate_json_to_path(data_to_export, output_path, root_name)
-	if json_string.is_empty():
-		update_status("Error: Failed to generate JSON")
-		return
-	
-	var chapter_count = data_to_export.size()
-	update_status("Success! Exported %d chapters to: %s" % [chapter_count, output_path])
+		# Jika root name kosong, gunakan format tanpa root wrapper
+		json_generator.set_no_root_wrapper(true)
+	else:
+		json_generator.set_no_root_wrapper(false)
+		json_generator.set_root_name(root_name)
 
-func update_status(message: String) -> void:
+
+
+## Deteksi tipe CSV dan konfigurasi parser dan generator
+func _detect_and_configure(csv_path: String) -> void:
+	current_csv_type = CSVConfig.detect_type(csv_path)
+	CSVConfig.configure_all(parser, json_generator, current_csv_type)
+	
+	var type_name = CSVConfig.get_type_name(current_csv_type)
+	_update_status("Detected: %s CSV format" % type_name)
+
+
+func _update_status(message: String) -> void:
 	status_label.text = "Status: " + message
-
 func _on_open_json_viewer_pressed() -> void:
 	get_tree().change_scene_to_file("res://UI/JSON UI/Json UI.tscn")

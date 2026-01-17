@@ -5,3 +5,6 @@
 /.idea/
 /.gitattributes
 /.editorconfig
+
+.json
+.csv

@@ -15,6 +15,7 @@ extends Control
 @onready var edit_value_edit: LineEdit = %EditValueEdit
 @onready var edit_type_label: Label = %EditTypeLabel
 @onready var edit_confirm_button: Button = %EditConfirmButton
+@onready var edit_delete_button: Button = %EditDeleteButton
 @onready var edit_cancel_button: Button = %EditCancelButton
 @onready var container_popup: PopupPanel = %ContainerPopup
 @onready var container_type_label: Label = %ContainerTypeLabel
@@ -22,7 +23,6 @@ extends Control
 @onready var add_value_edit: LineEdit = %AddValueEdit
 @onready var add_value_type_option: OptionButton = %AddValueTypeOption
 @onready var add_button: Button = %AddButton
-@onready var delete_button: Button = %DeleteButton
 @onready var container_cancel_button: Button = %ContainerCancelButton
 
 var current_json_data: Variant = null
@@ -55,12 +55,12 @@ func _connect_signals() -> void:
 	save_button.pressed.connect(_on_save_pressed)
 	json_tree.item_activated.connect(_on_tree_item_activated)
 	edit_confirm_button.pressed.connect(_on_edit_confirm_pressed)
+	edit_delete_button.pressed.connect(_on_edit_delete_pressed)
 	edit_cancel_button.pressed.connect(_on_edit_cancel_pressed)
 	edit_value_edit.text_submitted.connect(_on_edit_value_submitted)
 	json_editor.json_saved.connect(_on_json_saved)
 	json_editor.save_failed.connect(_on_save_failed)
 	add_button.pressed.connect(_on_add_button_pressed)
-	delete_button.pressed.connect(_on_delete_button_pressed)
 	container_cancel_button.pressed.connect(_on_container_cancel_pressed)
 
 func _on_browse_pressed() -> void:
@@ -280,21 +280,24 @@ func _on_add_button_pressed() -> void:
 		else:
 			update_status("Error: Failed to add item")
 
-## Handler untuk tombol Delete di container popup
-func _on_delete_button_pressed() -> void:
-	if _container_path.is_empty():
+## Handler untuk tombol Delete di edit popup (hapus item ini dari parent-nya)
+func _on_edit_delete_pressed() -> void:
+	if _editing_path.is_empty():
 		update_status("Error: Cannot delete root")
-		container_popup.hide()
+		edit_popup.hide()
 		return
 	
-	# Hapus container dari parent
-	if json_editor.delete_from_parent(_container_path):
+	# Hapus item dari parent
+	if json_editor.delete_from_parent(_editing_path):
 		update_status("Item deleted (unsaved)")
 		current_json_data = json_editor.get_data()
 		tree_handler.build_tree(current_json_data)
-		container_popup.hide()
 	else:
 		update_status("Error: Failed to delete item")
+	
+	_editing_item = null
+	_editing_path = []
+	edit_popup.hide()
 
 ## Fungsi untuk menampilkan popup add/delete container
 func _show_container_popup(item: TreeItem, is_array: bool) -> void:

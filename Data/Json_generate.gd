@@ -1,129 +1,396 @@
 extends Node
+class_name JSONGenerator
 
-# Definisikan urutan key untuk menyimpan data ke JSON
-const KEY_ORDER = [
-	"lineid",
-	"name",
-	"character",
-	"text",
-	"left",
-	"middle_right",
-	"middle",
-	"middle_left",
-	"right",
-	"scene_properties",
-	"dialogue_choice",
-	"next_line_properties",
-	"give_item",
-	"chapterid",
-	"goto",
-	"special_effects",
-	"sound_effect",
-	"music_effect"
-]
+## Skrip untuk membuat JSON dari data CSV
 
-func _ready() -> void:
-	pass
+enum OutputFormat {
+	GROUPED,          # Nested dari group ID dengan root wrapper
+	GROUPED_NO_ROOT,  # Nested dari group ID tanpa root wrapper (langsung kategori)
+	FLAT_DICT,        # Flat dictionary
+	ARRAY             # Array of items
+}
 
-## Generate JSON dari data yang diberikan ke output path yang ditentukan
-func generate_json_to_path(data: Dictionary, output_path: String, root_name: String = "MainStory") -> String:
-	if data.is_empty():
-		push_error("Data is empty")
-		return ""
+# Configuration
+var key_order: Array = []
+var output_format: OutputFormat = OutputFormat.GROUPED
+var root_name: String = "Data"
+var indent_string: String = "\t"
+var compact_arrays: bool = true
+var compact_threshold: int = 60
+var no_root_wrapper: bool = false
+
+## SET Functions
+func set_key_order(order: Array) -> JSONGenerator:
+	key_order = order
+	return self
+func set_output_format(format: OutputFormat) -> JSONGenerator:
+	output_format = format
+	return self
+func set_root_name(new_root_name: String) -> JSONGenerator:
+	root_name = new_root_name
+	return self
+func set_indent(indent: String) -> JSONGenerator:
+	indent_string = indent
+	return self
+func set_compact_arrays(compact: bool, threshold: int = 60) -> JSONGenerator:
+	compact_arrays = compact
+	compact_threshold = threshold
+	return self
+func set_no_root_wrapper(no_root: bool) -> JSONGenerator:
+	no_root_wrapper = no_root
+	return self
+
+## Preset konfigurasi untuk data CSV yang diambil dari DataSchemas
+func configure_for_dialog() -> JSONGenerator:
+	key_order = DataSchemas.get_dialog_key_order()
+	output_format = OutputFormat.GROUPED
+	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
+	return self
+func configure_for_items() -> JSONGenerator:
+	key_order = DataSchemas.get_item_key_order()
+	output_format = OutputFormat.GROUPED
+	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
+	return self
+func configure_for_ingredient() -> JSONGenerator:
+	key_order = DataSchemas.get_ingredient_key_order()
+	output_format = OutputFormat.GROUPED
+	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
+	return self
+func configure_for_array(custom_key_order: Array = [], root: String = "Data") -> JSONGenerator:
+	key_order = custom_key_order
+	output_format = OutputFormat.ARRAY
+	root_name = root
+	no_root_wrapper = false
+	return self
+
+## Fungsi untuk membuat JSON dari data dan menyimpannya ke file
+func generate_json_to_path(data, output_path: String) -> String:
+	var json_string = generate_json_string(data)
 	
-	# Buat string JSON dengan urutan key yang ditentukan
-	var json_string = stringify_order(data, root_name)
+	if json_string.is_empty():
+		push_error("Failed to generate JSON string")
+		return ""
 	
 	var file = FileAccess.open(output_path, FileAccess.WRITE)
 	if file == null:
 		push_error("Failed to create JSON file: " + output_path)
 		return ""
-		
-	# Menyimpan teks JSON ke file
+	
 	file.store_string(json_string)
 	file.close()
 	print("JSON file generated successfully at " + output_path)
 	
 	return json_string
 
-## Fungsi untuk menghasilkan string JSON dengan urutan key yang ditentukan
-func stringify_order(data: Dictionary, root_name: String = "DefaultRoot") -> String:
+## Fungsi untuk membuat JSON dari data dan mengembalikannya sebagai String
+func generate_json_string(data) -> String:
+	if data is Dictionary and data.is_empty():
+		push_error("Data is empty")
+		return ""
+	if data is Array and data.is_empty():
+		push_error("Data is empty")
+		return ""
+	
+	# Jika no_root_wrapper = true, gunakan format tanpa root
+	if no_root_wrapper:
+		if data is Dictionary:
+			return _stringify_grouped_no_root(data)
+		elif data is Array:
+			return _stringify_array_no_root(data)
+	
+	match output_format:
+		OutputFormat.GROUPED:
+			return _stringify_grouped(data)
+		OutputFormat.GROUPED_NO_ROOT:
+			return _stringify_grouped_no_root(data)
+		OutputFormat.FLAT_DICT:
+			return _stringify_flat_dict(data)
+		OutputFormat.ARRAY:
+			return _stringify_array(data)
+		_:
+			return _stringify_grouped(data)
+
+# Custom stringify untuk grouped format (dengan root wrapper)
+func _stringify_grouped(data: Dictionary) -> String:
 	var lines = []
 	lines.append("{")
-	lines.append("\t\"%s\": {" % root_name)
+	lines.append("%s\"%s\": {" % [indent_string, root_name])
 	
-	# Menulis key-value untuk setiap chapter
-	var chapter_keys = data.keys()
-	for c_idx in range(chapter_keys.size()):
-		var chapter = chapter_keys[c_idx]
-		lines.append("\t\t\"%s\": {" % chapter)
+	var group_keys = data.keys()
+	for g_idx in range(group_keys.size()):
+		var group = group_keys[g_idx]
+		var group_data = data[group]
+		var group_comma = "," if g_idx < group_keys.size() - 1 else ""
 		
-		# Menulis key-value untuk setiap line
-		var line_keys = data[chapter].keys()
-		for l_idx in range(line_keys.size()):
-			var lineid = line_keys[l_idx]
-			var row = data[chapter][lineid]
-			lines.append("\t\t\t\"%s\": {" % lineid)
-			
-			# Menulis key-value sesuai urutan di KEY_ORDER
-			for k_idx in range(KEY_ORDER.size()):
-				var key = KEY_ORDER[k_idx]
-				if row.has(key):
-					var value_str = value_to_json(row[key], 4)
-					var comma = "," if k_idx < KEY_ORDER.size() - 1 else ""
-					lines.append("\t\t\t\t\"%s\": %s%s" % [key, value_str, comma])
-			
-			# Tutup tag line
-			var line_comma = "," if l_idx < line_keys.size() - 1 else ""
-			lines.append("\t\t\t}%s" % line_comma)
-		
-		# Tutup tag chapter
-		var chapter_comma = "," if c_idx < chapter_keys.size() - 1 else ""
-		lines.append("\t\t}%s" % chapter_comma)
+		if group_data is Dictionary:
+			lines.append("%s\"%s\": {" % [indent_string.repeat(2), group])
+			lines.append_array(_stringify_dict_items(group_data, 3))
+			lines.append("%s}%s" % [indent_string.repeat(2), group_comma])
+		elif group_data is Array:
+			lines.append("%s\"%s\": [" % [indent_string.repeat(2), group])
+			lines.append_array(_stringify_array_items(group_data, 3))
+			lines.append("%s]%s" % [indent_string.repeat(2), group_comma])
+		else:
+			lines.append("%s\"%s\": %s%s" % [indent_string.repeat(2), group, _value_to_json(group_data, 2), group_comma])
 	
-	# Tutup tag MainStory
-	lines.append("\t}")
+	lines.append("%s}" % indent_string)
 	lines.append("}")
 	
-	# Join semua baris ke satu string
 	return "\n".join(lines)
 
-## Konversi tipe data (string,bool,int) ke format JSON
-func value_to_json(value, indent_level: int = 0) -> String:
-	# Jika teks, tambahkan tanda petik dan bersihkan karakter khusus
+
+# Custom stringify untuk grouped format tanpa root wrapper (langsung kategori)
+func _stringify_grouped_no_root(data: Dictionary) -> String:
+	var lines = []
+	lines.append("{")
+	
+	var group_keys = data.keys()
+	for g_idx in range(group_keys.size()):
+		var group = group_keys[g_idx]
+		var group_data = data[group]
+		var group_comma = "," if g_idx < group_keys.size() - 1 else ""
+		
+		if group_data is Dictionary:
+			# Cek apakah ini nested dictionary (berisi items) atau flat dict
+			var first_value = group_data.values()[0] if not group_data.is_empty() else null
+			if first_value is Dictionary:
+				# Nested - konversi ke array
+				lines.append("%s\"%s\": [" % [indent_string, group])
+				var items_array = group_data.values()
+				lines.append_array(_stringify_array_items(items_array, 2))
+				lines.append("%s]%s" % [indent_string, group_comma])
+			else:
+				# Flat dictionary
+				lines.append("%s\"%s\": {" % [indent_string, group])
+				lines.append_array(_stringify_dict_items(group_data, 2))
+				lines.append("%s}%s" % [indent_string, group_comma])
+		elif group_data is Array:
+			lines.append("%s\"%s\": [" % [indent_string, group])
+			lines.append_array(_stringify_array_items(group_data, 2))
+			lines.append("%s]%s" % [indent_string, group_comma])
+		else:
+			lines.append("%s\"%s\": %s%s" % [indent_string, group, _value_to_json(group_data, 1), group_comma])
+	
+	lines.append("}")
+	
+	return "\n".join(lines)
+
+## Custom stringify untuk dictionary items (handle both data items and metadata)
+func _stringify_dict_items(data: Dictionary, indent_level: int) -> Array:
+	var lines = []
+	var item_keys = data.keys()
+	var indent = indent_string.repeat(indent_level)
+	
+	for i_idx in range(item_keys.size()):
+		var item_id = item_keys[i_idx]
+		var item = data[item_id]
+		var comma = "," if i_idx < item_keys.size() - 1 else ""
+		
+		if item is Dictionary:
+			# Normal data item (nested object)
+			lines.append("%s\"%s\": {" % [indent, item_id])
+			lines.append_array(_stringify_object_fields(item, indent_level + 1))
+			lines.append("%s}%s" % [indent, comma])
+		elif item is Array:
+			lines.append("%s\"%s\": %s%s" % [indent, item_id, _value_to_json(item, indent_level), comma])
+		else:
+			# Primitive values (String, int, float, bool, null) - includes metadata like BUTTONHEADER
+			lines.append("%s\"%s\": %s%s" % [indent, item_id, _value_to_json(item, indent_level), comma])
+	
+	return lines
+
+
+
+## Custom stringify untuk flat dictionary format
+func _stringify_flat_dict(data: Dictionary) -> String:
+	var lines = []
+	lines.append("{")
+	lines.append("%s\"%s\": {" % [indent_string, root_name])
+	
+	var flat_data = _flatten_dict(data)
+	lines.append_array(_stringify_dict_items(flat_data, 2))
+	
+	lines.append("%s}" % indent_string)
+	lines.append("}")
+	
+	return "\n".join(lines)
+
+## Fungsi untuk menggabungkan semua data dalam dictionary
+func _flatten_dict(data: Dictionary) -> Dictionary:
+	var result = {}
+	for key in data:
+		if data[key] is Dictionary:
+			var first_value = data[key].values()[0] if not data[key].is_empty() else null
+			if first_value is Dictionary:
+				for inner_key in data[key]:
+					result[inner_key] = data[key][inner_key]
+			else:
+				result[key] = data[key]
+		else:
+			result[key] = data[key]
+	return result
+
+## Custom stringify untuk array format
+func _stringify_array(data) -> String:
+	var lines = []
+	lines.append("{")
+	lines.append("%s\"%s\": [" % [indent_string, root_name])
+	
+	var array_data: Array = []
+	if data is Dictionary:
+		array_data = _dict_to_array(data)
+	elif data is Array:
+		array_data = data
+	
+	lines.append_array(_stringify_array_items(array_data, 2))
+	
+	lines.append("%s]" % indent_string)
+	lines.append("}")
+	
+	return "\n".join(lines)
+
+## Custom stringify untuk array format tanpa root wrapper
+func _stringify_array_no_root(data) -> String:
+	var lines = []
+	lines.append("[")
+	
+	var array_data: Array = []
+	if data is Dictionary:
+		array_data = _dict_to_array(data)
+	elif data is Array:
+		array_data = data
+	
+	lines.append_array(_stringify_array_items(array_data, 1))
+	
+	lines.append("]")
+	
+	return "\n".join(lines)
+
+## Fungsi untuk menggabungkan semua data dalam dictionary ke dalam array
+func _dict_to_array(data: Dictionary) -> Array:
+	var result = []
+	for key in data:
+		if data[key] is Dictionary:
+			var first_value = data[key].values()[0] if not data[key].is_empty() else null
+			if first_value is Dictionary:
+				for inner_key in data[key]:
+					result.append(data[key][inner_key])
+			else:
+				result.append(data[key])
+		else:
+			result.append({"id": key, "value": data[key]})
+	return result
+
+## Custom stringify untuk array items
+func _stringify_array_items(data: Array, indent_level: int) -> Array:
+	var lines = []
+	var indent = indent_string.repeat(indent_level)
+	
+	for i_idx in range(data.size()):
+		var item = data[i_idx]
+		var comma = "," if i_idx < data.size() - 1 else ""
+		
+		if item is Dictionary:
+			lines.append("%s{" % indent)
+			lines.append_array(_stringify_object_fields(item, indent_level + 1))
+			lines.append("%s}%s" % [indent, comma])
+		else:
+			lines.append("%s%s%s" % [indent, _value_to_json(item, indent_level), comma])
+	
+	return lines
+
+## Custom stringify untuk object fields
+func _stringify_object_fields(obj: Dictionary, indent_level: int) -> Array:
+	var lines = []
+	var indent = indent_string.repeat(indent_level)
+	
+	var keys_to_use = _get_ordered_keys(obj)
+	
+	for k_idx in range(keys_to_use.size()):
+		var key = keys_to_use[k_idx]
+		var value = obj[key]
+		var value_str = _value_to_json(value, indent_level)
+		var comma = "," if k_idx < keys_to_use.size() - 1 else ""
+		lines.append("%s\"%s\": %s%s" % [indent, key, value_str, comma])
+	
+	return lines
+
+## GET keys dalam urutan yang sudah ditentukan
+func _get_ordered_keys(obj: Dictionary) -> Array:
+	var keys_to_use = []
+	
+	if not key_order.is_empty():
+		for key in key_order:
+			if obj.has(key):
+				keys_to_use.append(key)
+		for key in obj.keys():
+			if not keys_to_use.has(key):
+				keys_to_use.append(key)
+	else:
+		keys_to_use = obj.keys()
+	
+	return keys_to_use
+
+## Fungsi untuk mengubah value menjadi JSON string
+func _value_to_json(value, indent_level: int = 0) -> String:
 	if value is String:
-		return "\"%s\"" % escape_json_string(value)
-	# Jika boolean, konversi ke string "true" atau "false"
+		return "\"%s\"" % _escape_json_string(value)
 	elif value is bool:
 		return "true" if value else "false"
-	# Jika angka, konversi langsung ke string
 	elif value is int or value is float:
 		return str(value)
-	# Jika array, proses setiap item di dalamnya
 	elif value is Array:
-		if value.is_empty():
-			return "[]"
-		var items = []
-		for item in value:
-			items.append(value_to_json(item, indent_level))
-		# Untuk array yang singkat, gunakan format sederhana
-		var joined = ", ".join(items)
-		if joined.length() < 60:
-			return "[%s]" % joined
-		# Untuk array yang panjang, gunakan format terindentasi
-		var indent = "\t".repeat(indent_level + 1)
-		var close_indent = "\t".repeat(indent_level)
-		var formatted_items = []
-		for item in value:
-			formatted_items.append("%s%s" % [indent, value_to_json(item, indent_level + 1)])
-		return "[\n%s\n%s]" % [",\n".join(formatted_items), close_indent]
+		return _array_to_json(value, indent_level)
 	elif value is Dictionary:
-		return JSON.stringify(value)
+		return _dict_to_json(value, indent_level)
+	elif value == null:
+		return "null"
 	else:
 		return "\"%s\"" % str(value)
 
-## Fungsi untuk membersihkan spesial karakter dalam string JSON
-func escape_json_string(s: String) -> String:
+## Fungsi untuk mengubah array menjadi JSON string
+func _array_to_json(arr: Array, indent_level: int) -> String:
+	if arr.is_empty():
+		return "[]"
+	
+	var items = []
+	for item in arr:
+		items.append(_value_to_json(item, indent_level))
+	
+	var joined = ", ".join(items)
+	
+	if compact_arrays and joined.length() < compact_threshold:
+		return "[%s]" % joined
+	
+	var indent = indent_string.repeat(indent_level + 1)
+	var close_indent = indent_string.repeat(indent_level)
+	var formatted_items = []
+	for item in arr:
+		formatted_items.append("%s%s" % [indent, _value_to_json(item, indent_level + 1)])
+	return "[\n%s\n%s]" % [",\n".join(formatted_items), close_indent]
+
+## Fungsi untuk mengubah dictionary menjadi JSON string
+func _dict_to_json(dict: Dictionary, indent_level: int) -> String:
+	if dict.is_empty():
+		return "{}"
+	
+	var items = []
+	for key in dict:
+		items.append("\"%s\": %s" % [key, _value_to_json(dict[key], indent_level)])
+	
+	var joined = ", ".join(items)
+	
+	if compact_arrays and joined.length() < compact_threshold:
+		return "{%s}" % joined
+	
+	var indent = indent_string.repeat(indent_level + 1)
+	var close_indent = indent_string.repeat(indent_level)
+	var formatted_items = []
+	for key in dict:
+		formatted_items.append("%s\"%s\": %s" % [indent, key, _value_to_json(dict[key], indent_level + 1)])
+	return "{\n%s\n%s}" % [",\n".join(formatted_items), close_indent]
+
+func _escape_json_string(s: String) -> String:
 	s = s.replace("\\", "\\\\")
 	s = s.replace("\"", "\\\"")
 	s = s.replace("\n", "\\n")
