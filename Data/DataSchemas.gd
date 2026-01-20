@@ -6,41 +6,24 @@ extends RefCounted
 ## Schema untuk file Dialog CSV
 static func get_dialog_schema() -> Dictionary:
 	return {
-		"lineid": {"column": 0, "type": "string", "is_id": true},
-		"name": {"column": 1, "type": "string", "default": ""},
-		"text": {"column": 2, "type": "string", "default": ""},
-		"character": {"column": 3, "type": "array", "default": []},
-		"left": {"column": 4, "type": "array", "default": []},
-		"middle_left": {"column": 5, "type": "array", "default": []},
-		"middle": {"column": 6, "type": "array", "default": []},
-		"middle_right": {"column": 7, "type": "array", "default": []},
-		"right": {"column": 8, "type": "array", "default": []},
-		"scene_properties": {"column": 9, "type": "scene_props", "default": []},
-		"dialogue_choice": {"column": 10, "type": "string", "default": ""},
-		"next_line_properties": {"column": 11, "type": "next_line", "default": []},
-		"give_item": {"column": 12, "type": "array", "default": []},
-		"chapterid": {"column": 13, "type": "string", "default": ""},
-		"goto": {"column": 14, "type": "string", "default": ""},
-		"special_effects": {"column": 15, "type": "array", "default": []},
-		"sound_effect": {"column": 16, "type": "string", "default": ""},
-		"music_effect": {"column": 17, "type": "string", "default": ""}
-	}
-
-
-## Schema untuk Item Data CSV
-static func get_item_schema() -> Dictionary:
-	return {
-		"id": {"column": 0, "type": "int", "is_id": true},
-		"name": {"column": 1, "type": "string", "default": ""},
-		"type": {"column": 2, "type": "string", "default": ""},
-		"description": {"column": 3, "type": "string", "default": ""},
-		"richness": {"column": 4, "type": "int", "default": 0},
-		"boldness": {"column": 5, "type": "int", "default": 0},
-		"fanciness": {"column": 6, "type": "int", "default": 0},
-		"unlock_price": {"column": 7, "type": "int", "default": 0},
-		"buy_price": {"column": 8, "type": "int", "default": 0},
-		"icon_default": {"column": 9, "type": "string", "default": ""},
-		"where_to_get": {"column": 10, "type": "string", "default": ""}
+		"lineid": {"header_name": "lineid", "type": "string", "is_id": true},
+		"name": {"header_name": "Name", "type": "string", "default": ""},
+		"text": {"header_name": "text", "type": "string", "default": ""},
+		"character": {"header_name": "character", "type": "array", "default": []},
+		"left": {"header_name": "left", "type": "array", "default": []},
+		"middle_left": {"header_name": "middle-left", "type": "array", "default": []},
+		"middle": {"header_name": "middle", "type": "array", "default": []},
+		"middle_right": {"header_name": "middle-right", "type": "array", "default": []},
+		"right": {"header_name": "right", "type": "array", "default": []},
+		"scene_properties": {"header_name": "scene_properties", "type": "scene_props", "default": []},
+		"dialogue_choice": {"header_name": "dialogue_choice", "type": "string", "default": ""},
+		"next_line_properties": {"header_name": "next_line_properties", "type": "next_line", "default": []},
+		"give_item": {"header_name": "give_item", "type": "array", "default": []},
+		"chapterid": {"header_name": "chapter", "type": "string", "default": ""},
+		"goto": {"header_name": "goto", "type": "string", "default": ""},
+		"special_effects": {"header_name": "special_effects", "type": "array", "default": []},
+		"sound_effect": {"header_name": "sound_effects", "type": "string", "default": ""},
+		"music_effect": {"header_name": "music_effect", "type": "string", "default": ""}
 	}
 
 
@@ -55,69 +38,47 @@ static func get_dialog_key_order() -> Array:
 	]
 
 
-## Key order untuk Item JSON output
-static func get_item_key_order() -> Array:
-	return [
-		"id", "name", "type", "description",
-		"richness", "boldness", "fanciness",
-		"unlock_price", "buy_price", "icon_default", "where_to_get"
-	]
-
-
 ## Dialog parser configuration
 static func get_dialog_config() -> Dictionary:
 	return {
 		"schema": get_dialog_schema(),
-		"group_column": 13,       # Group by chapterid
-		"start_row": 5,           # Skip first 5 header rows
-		"id_column": 0,           # lineid as ID
-		"metadata_column": 1,     # Name column untuk deteksi BUTTONHEADER
-		"metadata_value_column": 2,  # Text column untuk nilai button header
+		"group_header": "chapter",       # Grouping menggunakan kolom 'chapter'
+		"header_row": 0,                   # Header ada di baris pertama (0)
+		"start_row": 4,                    # Data dimulai baris ke-5
+		"id_header": "lineid",             # lineid sebagai ID
+		"metadata_header": "Name",         # Name column untuk deteksi BUTTONHEADER
+		"metadata_value_header": "text",   # Text column untuk nilai button header
 		"supported_metadata_types": ["BUTTONHEADER"],
 		"key_order": get_dialog_key_order()
 	}
 
 
-## Item parser configuration
-static func get_item_config() -> Dictionary:
-	return {
-		"schema": get_item_schema(),
-		"group_column": 2,        # Group by type
-		"start_row": 1,           # Skip header row
-		"id_column": 0,           # id as ID
-		"metadata_column": -1,    # No metadata
-		"metadata_value_column": -1,
-		"supported_metadata_types": [],
-		"key_order": get_item_key_order()
-	}
-
-
-## Schema untuk Ingredient Data CSV (output tanpa root)
+## Schema untuk Ingredient Data CSV
 static func get_ingredient_schema() -> Dictionary:
 	return {
-		"id": {"column": 0, "type": "int", "is_id": true},
-		"nameEnglish": {"column": 1, "type": "string", "default": ""},
-		"nameIndonesian": {"column": 1, "type": "string", "default": null},  # Same column, can be set differently if needed
-		"description": {"column": 3, "type": "string", "default": ""},
-		"iconBig": {"column": 9, "type": "string", "default": "placeholder"},
-		"iconHovered": {"column": 9, "type": "string", "default": "placeholder"},
-		"iconFocused": {"column": 9, "type": "string", "default": "placeholder"},
-		"iconDefault": {"column": 9, "type": "string", "default": ""},
-		"iconFull": {"column": 9, "type": "string", "default": ""},
+		"id": {"header_name": "id", "type": "int", "is_id": true},
+		"nameEnglish": {"header_name": "name", "type": "string", "default": ""},
+		"nameIndonesian": {"header_name": "name_id", "type": "string", "default": null},
+		"description": {"header_name": "description", "type": "string", "default": ""},
+		"iconBig": {"header_name": "icon", "type": "string", "default": "placeholder"},
+		"iconHovered": {"header_name": "icon", "type": "string", "default": "placeholder"},
+		"iconFocused": {"header_name": "icon", "type": "string", "default": "placeholder"},
+		"iconDefault": {"header_name": "icon", "type": "string", "default": ""},
+		"iconFull": {"header_name": "icon", "type": "string", "default": ""},
 		"traits": {
 			"type": "nested",
 			"fields": {
-				"richness": {"column": 4, "type": "int", "default": 0},
-				"boldness": {"column": 5, "type": "int", "default": 0},
-				"fanciness": {"column": 6, "type": "int", "default": 0}
+				"richness": {"header_name": "richness", "type": "int", "default": 0},
+				"boldness": {"header_name": "boldness", "type": "int", "default": 0},
+				"fanciness": {"header_name": "fanciness", "type": "int", "default": 0}
 			}
 		},
-		"unlockPrice": {"column": 7, "type": "int", "default": 0},
-		"shopLocation": {"column": 10, "type": "string", "default": "-"}
+		"unlockPrice": {"header_name": "unlock_price", "type": "float", "default": 0.0},
+		"shopLocation": {"header_name": "shop_location", "type": "string", "default": "-"}
 	}
 
 
-## Key order untuk Ingredient JSON output (tanpa root)
+## Key order untuk Ingredient JSON output
 static func get_ingredient_key_order() -> Array:
 	return [
 		"id", "nameEnglish", "nameIndonesian", "description",
@@ -126,18 +87,62 @@ static func get_ingredient_key_order() -> Array:
 	]
 
 
-## Ingredient parser configuration (output langsung ke kategori tanpa root)
+## Ingredient parser configuration
 static func get_ingredient_config() -> Dictionary:
 	return {
 		"schema": get_ingredient_schema(),
-		"group_column": 2,        # Group by Type (Base, Seasoning, etc.)
-		"start_row": 1,           # Skip header row
-		"id_column": 0,           # id as ID
-		"metadata_column": -1,    # No metadata
-		"metadata_value_column": -1,
+		"group_header": "type",           # Group by Type header
+		"header_row": 0,                  # Baris ke-0 adalah header
+		"start_row": 1,                   # Skip header row
+		"id_header": "id",                # id sebagai ID
+		"metadata_header": "",            # No metadata
+		"metadata_value_header": "",
 		"supported_metadata_types": [],
 		"key_order": get_ingredient_key_order(),
-		"no_root": true           # Flag untuk output tanpa root
 	}
 
 
+## Schema untuk Item Data CSV
+static func get_item_schema() -> Dictionary:
+	return {
+		"id": {"header_name": "IngredientId", "type": "int", "is_id": true},
+		"name": {"header_name": "Ingredient Name", "type": "string", "default": ""},
+		"type": {"header_name": "Type", "type": "string", "default": ""},
+		"description": {"header_name": "Description", "type": "string", "default": ""},
+		"traits": {
+			"type": "nested",
+			"fields": {
+				"richness": {"header_name": "Richness Gain", "type": "int", "default": 0},
+				"boldness": {"header_name": "Boldness Gain", "type": "int", "default": 0},
+				"fanciness": {"header_name": "Fanciness Gain", "type": "int", "default": 0}
+			}
+		},
+		"unlockPrice": {"header_name": "Unlock Price", "type": "int", "default": 0},
+		"buyPrice": {"header_name": "Buy Price", "type": "int", "default": 0},
+		"icon": {"header_name": "filename_default", "type": "string", "default": ""},
+		"shopLocation": {"header_name": "Where to Get", "type": "string", "default": "-"}
+	}
+
+
+## Key order untuk Item JSON output
+static func get_item_key_order() -> Array:
+	return [
+		"id", "name", "type", "description",
+		"traits", "unlockPrice", "buyPrice",
+		"icon", "shopLocation"
+	]
+
+
+## Item parser configuration
+static func get_item_config() -> Dictionary:
+	return {
+		"schema": get_item_schema(),
+		"group_header": "type",           # Group by Type column
+		"header_row": 0,                  # Baris ke-0 adalah header
+		"start_row": 1,                   # Data dimulai baris ke-2 (skip header)
+		"id_header": "ingredientid",      # IngredientId sebagai ID
+		"metadata_header": "",            # No metadata
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_item_key_order(),
+	}

@@ -43,7 +43,40 @@ func _ready() -> void:
 	tree_handler = JsonTree.new()
 	tree_handler.init(json_tree)
 	_connect_signals()
-	update_status("Ready - Select JSON file to view")
+	
+	# Cek apakah ada pending data dari GlobalData autoload
+	if GlobalData.has_pending_data():
+		_load_pending_data()
+	else:
+		update_status("Ready - Select JSON file to view")
+
+## Load file dari pending data (dari Main scene dengan warning IDs)
+func _load_pending_data() -> void:
+	var pending_data = GlobalData.get_and_clear_pending_data()
+	var path = pending_data.path
+	var warning_ids_raw = pending_data.warning_ids
+	var warning_details_raw = pending_data.get("warning_details", [])
+	
+	print("[JsonUI] Loading pending data - path: ", path, ", warning_ids: ", warning_ids_raw, ", warning_details: ", warning_details_raw)
+	
+	# Set path di UI
+	file_path_edit.text = path
+	current_file_path = path
+	
+	# Set warning details ke tree handler untuk highlighting spesifik kolom
+	if warning_details_raw.size() > 0:
+		tree_handler.set_warning_details_variant(warning_details_raw)
+	elif warning_ids_raw.size() > 0:
+		# Fallback ke warning_ids saja (legacy)
+		tree_handler.set_warning_ids_variant(warning_ids_raw)
+	
+	# Load file JSON
+	_load_json_file(path)
+	
+	if warning_details_raw.size() > 0:
+		update_status("Loaded with %d warning fields highlighted in RED" % warning_details_raw.size())
+	elif warning_ids_raw.size() > 0:
+		update_status("Loaded with %d warning items highlighted in RED" % warning_ids_raw.size())
 
 func _connect_signals() -> void:
 	browse_button.pressed.connect(_on_browse_pressed)
@@ -95,6 +128,10 @@ func _load_json_file(path: String) -> void:
 	current_file_path = path
 	json_editor.init(current_json_data, current_file_path)
 	tree_handler.set_data(current_json_data)
+	
+	# Debug: Print warning IDs sebelum build tree
+	print("[JsonUI] About to build_tree, tree_handler warning_ids: ", tree_handler.get_warning_ids())
+	
 	tree_handler.build_tree(current_json_data)
 	update_status("Loaded: " + path.get_file() + " (Double-click to edit values)")
 

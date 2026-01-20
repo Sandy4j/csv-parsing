@@ -46,16 +46,19 @@ func configure_for_dialog() -> JSONGenerator:
 	output_format = OutputFormat.GROUPED
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
-func configure_for_items() -> JSONGenerator:
-	key_order = DataSchemas.get_item_key_order()
-	output_format = OutputFormat.GROUPED
-	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
-	return self
+
 func configure_for_ingredient() -> JSONGenerator:
 	key_order = DataSchemas.get_ingredient_key_order()
 	output_format = OutputFormat.GROUPED
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
+
+func configure_for_item() -> JSONGenerator:
+	key_order = DataSchemas.get_item_key_order()
+	output_format = OutputFormat.GROUPED
+	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
+	return self
+
 func configure_for_array(custom_key_order: Array = [], root: String = "Data") -> JSONGenerator:
 	key_order = custom_key_order
 	output_format = OutputFormat.ARRAY

@@ -3,49 +3,68 @@ class_name CSVParser
 
 ## Skrip untuk parsing CSV data
 
+# Parsing Mode
+enum ParseMode {
+	STRUCTURE_ONLY,  # Untuk Load Chapters - hanya struktur
+	FULL_VALIDATION  # Untuk Generate - validasi penuh
+}
+
 # Configuration
 var schema: Dictionary = {}
-var group_by_column: int = -1
-var start_row: int = 0
-var id_column: int = 0
+var group_header: String = ""           # Nama header untuk grouping
+var header_row: int = 0                 # Baris mana yang berisi header (0-based)
+var start_row: int = 1                  # Baris mulai data (setelah header)
+var id_header: String = ""              # Nama header untuk ID
 var skip_empty_groups: bool = true
 var default_group_name: String = "Uncategorized"
 
-# Metadata configuration
-var metadata_column: int = -1
-var metadata_value_column: int = -1
+# Metadata configuration (header-based)
+var metadata_header: String = ""        # Nama header untuk deteksi metadata type
+var metadata_value_header: String = ""  # Nama header untuk nilai metadata
 var supported_metadata_types: Array = []
+
+# Dynamic Header Mapping
+var _header_map: Dictionary = {}        # Mapping: header_name (lowercase) -> column_index
 
 # Penyimpanan data
 var _data_rows: Dictionary = {}
 var _available_groups: Array = []
 var _group_metadata: Dictionary = {}
 
+# Error collection
+var parsing_errors: Array = []  # Array of TransformError atau String
+var warning_row_ids: Array[String] = []  # Array untuk menyimpan row_id yang bermasalah
+var warning_details: Array[Dictionary] = []
+var _current_parse_mode: ParseMode = ParseMode.FULL_VALIDATION
+
 
 ## SET Configuration
 func set_schema(new_schema: Dictionary) -> CSVParser:
 	schema = new_schema
 	return self
-func set_group_column(column: int) -> CSVParser:
-	group_by_column = column
+func set_group_header(header: String) -> CSVParser:
+	group_header = header.to_lower().strip_edges()
+	return self
+func set_header_row(row: int) -> CSVParser:
+	header_row = row
 	return self
 func set_start_row(row: int) -> CSVParser:
 	start_row = row
 	return self
-func set_id_column(column: int) -> CSVParser:
-	id_column = column
+func set_id_header(header: String) -> CSVParser:
+	id_header = header.to_lower().strip_edges()
 	return self
 func set_skip_empty_groups(skip: bool) -> CSVParser:
 	skip_empty_groups = skip
 	return self
-func set_default_group_name(name: String) -> CSVParser:
-	default_group_name = name
+func set_default_group_name(group_name: String) -> CSVParser:
+	default_group_name = group_name
 	return self
-func set_metadata_column(column: int) -> CSVParser:
-	metadata_column = column
+func set_metadata_header(header: String) -> CSVParser:
+	metadata_header = header.to_lower().strip_edges()
 	return self
-func set_metadata_value_column(column: int) -> CSVParser:
-	metadata_value_column = column
+func set_metadata_value_header(header: String) -> CSVParser:
+	metadata_value_header = header.to_lower().strip_edges()
 	return self
 func set_supported_metadata_types(types: Array) -> CSVParser:
 	supported_metadata_types = types
@@ -55,40 +74,74 @@ func add_metadata_type(meta_type: String) -> CSVParser:
 		supported_metadata_types.append(meta_type)
 	return self
 
+## Set parsing mode (STRUCTURE_ONLY atau FULL_VALIDATION)
+func set_parse_mode(mode: ParseMode) -> CSVParser:
+	_current_parse_mode = mode
+	return self
+
+## Cek apakah ada conversion errors (untuk mode validasi)
+func has_conversion_errors() -> bool:
+	for err in parsing_errors:
+		if err is Dictionary and err.has("row_id"):
+			return true
+	return false
+
+## GET warning row IDs
+func get_warning_row_ids() -> Array[String]:
+	return warning_row_ids
+
+## GET warning details (ID + column) untuk highlight spesifik
+func get_warning_details() -> Array[Dictionary]:
+	return warning_details
+
+## GET error messages sebagai array string (untuk tampilan UI)
+func get_error_messages() -> Array[String]:
+	var messages: Array[String] = []
+	for err in parsing_errors:
+		if err is Dictionary and err.has("message"):
+			messages.append(err.message)
+		elif err is String:
+			messages.append(err)
+	return messages
+
 
 
 ## Preset Konfigurasi untuk CSV file diambil dari DataSchemas
 func configure_for_dialog() -> CSVParser:
 	var config = DataSchemas.get_dialog_config()
 	schema = config.schema
-	group_by_column = config.group_column
+	group_header = config.group_header
+	header_row = config.header_row
 	start_row = config.start_row
-	id_column = config.id_column
-	metadata_column = config.metadata_column
-	metadata_value_column = config.metadata_value_column
-	supported_metadata_types = config.supported_metadata_types
-	return self
-func configure_for_items() -> CSVParser:
-	var config = DataSchemas.get_item_config()
-	schema = config.schema
-	group_by_column = config.group_column
-	start_row = config.start_row
-	id_column = config.id_column
-	metadata_column = config.metadata_column
-	metadata_value_column = config.metadata_value_column
-	supported_metadata_types = config.supported_metadata_types
-	return self
-func configure_for_ingredient() -> CSVParser:
-	var config = DataSchemas.get_ingredient_config()
-	schema = config.schema
-	group_by_column = config.group_column
-	start_row = config.start_row
-	id_column = config.id_column
-	metadata_column = config.metadata_column
-	metadata_value_column = config.metadata_value_column
+	id_header = config.id_header
+	metadata_header = config.metadata_header
+	metadata_value_header = config.metadata_value_header
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
+func configure_for_ingredient() -> CSVParser:
+	var config = DataSchemas.get_ingredient_config()
+	schema = config.schema
+	group_header = config.group_header
+	header_row = config.header_row
+	start_row = config.start_row
+	id_header = config.id_header
+	metadata_header = config.metadata_header
+	metadata_value_header = config.metadata_value_header
+	supported_metadata_types = config.supported_metadata_types
+	return self
+
+func configure_for_item() -> CSVParser:
+	var config = DataSchemas.get_item_config()
+	schema = config.schema
+	group_header = config.group_header
+	header_row = config.header_row
+	start_row = config.start_row
+	id_header = config.id_header
+	metadata_header = config.metadata_header
+	metadata_value_header = config.metadata_value_header
+	supported_metadata_types = config.supported_metadata_types
+	return self
 
 
 ## Fungsi untuk parsing CSV file
@@ -97,7 +150,9 @@ func parse_csv_from_path(file_path: String) -> bool:
 	
 	var file = FileAccess.open(file_path, FileAccess.READ)
 	if file == null:
-		push_error("Failed to open CSV file: " + file_path)
+		var msg = "Gagal membuka file CSV: " + file_path
+		push_error(msg)
+		parsing_errors.append(msg)
 		return false
 	
 	var csv_text = file.get_as_text()
@@ -109,6 +164,29 @@ func parse_csv_from_path(file_path: String) -> bool:
 func parse_csv_text(csv_text: String) -> bool:
 	var lines = csv_text.split("\n")
 	
+	# Validasi schema sudah di-set
+	if schema.is_empty():
+		var msg = "Schema tidak ditemukan. Pastikan tipe CSV sudah dikonfigurasi dengan benar."
+		push_warning(msg)
+		parsing_errors.append(msg)
+		return false
+	
+	# Validasi file memiliki cukup baris untuk header
+	if lines.size() <= header_row:
+		var msg = "File CSV tidak memiliki cukup baris. Header row: %d, total baris: %d" % [header_row, lines.size()]
+		push_warning(msg)
+		parsing_errors.append(msg)
+		return false
+	
+	# Parse header row untuk membuat _header_map
+	var header_line = lines[header_row].strip_edges()
+	if not _build_header_map(header_line):
+		return false
+	
+	# Validasi semua header yang dibutuhkan schema ada dalam CSV
+	_validate_schema_headers()
+	
+	# Parse data rows
 	for i in range(start_row, lines.size()):
 		var line = lines[i].strip_edges()
 		if line.is_empty():
@@ -121,7 +199,7 @@ func parse_csv_text(csv_text: String) -> bool:
 			_store_metadata(row)
 			continue
 		
-		var row_data = _process_row(row)
+		var row_data = _process_row(row, i + 1)
 		if row_data.is_empty():
 			continue
 		
@@ -131,11 +209,70 @@ func parse_csv_text(csv_text: String) -> bool:
 	_update_available_groups()
 	return true
 
+
+## Build header map dari baris header CSV
+func _build_header_map(header_line: String) -> bool:
+	_header_map.clear()
+	var headers = _parse_csv_line(header_line)
+	
+	if headers.is_empty():
+		var msg = "Header CSV kosong atau tidak valid."
+		push_warning(msg)
+		parsing_errors.append(msg)
+		return false
+	
+	for i in range(headers.size()):
+		var header_name = headers[i].strip_edges().to_lower()
+		if not header_name.is_empty():
+			_header_map[header_name] = i
+	
+	return true
+
+
+## Validasi semua header yang dibutuhkan schema ada dalam CSV
+func _validate_schema_headers() -> void:
+	for field_name in schema:
+		var field_config = schema[field_name]
+		var field_type = field_config.get("type", "string")
+		
+		if field_type == "nested":
+			# Validasi nested fields
+			var nested_fields = field_config.get("fields", {})
+			for nested_key in nested_fields:
+				var nested_config = nested_fields[nested_key]
+				var header_name = nested_config.get("header_name", "").to_lower()
+				if not header_name.is_empty() and not _header_map.has(header_name):
+					var msg = "Header tidak ditemukan: '%s' untuk field '%s.%s'. Akan menggunakan nilai default." % [header_name, field_name, nested_key]
+					push_warning(msg)
+					parsing_errors.append(msg)
+		else:
+			var header_name = field_config.get("header_name", "").to_lower()
+			if not header_name.is_empty() and not _header_map.has(header_name):
+				var msg = "Header tidak ditemukan: '%s' untuk field '%s'. Akan menggunakan nilai default." % [header_name, field_name]
+				push_warning(msg)
+				parsing_errors.append(msg)
+	
+	# Validasi group_header jika diset
+	if not group_header.is_empty() and not _header_map.has(group_header):
+		var msg = "Header untuk grouping tidak ditemukan: '%s'. Data tidak akan dikelompokkan." % group_header
+		push_warning(msg)
+		parsing_errors.append(msg)
+	
+	# Validasi id_header jika diset
+	if not id_header.is_empty() and not _header_map.has(id_header):
+		var msg = "Header untuk ID tidak ditemukan: '%s'. Akan menggunakan random ID." % id_header
+		push_warning(msg)
+		parsing_errors.append(msg)
+
 ## Mengosongkan data penyimpanan
 func _clear_data() -> void:
 	_data_rows.clear()
 	_available_groups.clear()
 	_group_metadata.clear()
+	_header_map.clear()
+	parsing_errors.clear()
+	warning_row_ids.clear()
+	warning_details.clear()
 
 ## Mengubah satu baris CSV menjadi array
 func _parse_csv_line(line: String) -> Array:
@@ -162,12 +299,17 @@ func _parse_csv_line(line: String) -> Array:
 	result.append(current_field)
 	return result
 
-## Mengubah satu baris CSV menjadi dictionary
-func _process_row(row: Array) -> Dictionary:
+## Mengubah satu baris CSV menjadi dictionary menggunakan Dynamic Header Mapping
+func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 	if schema.is_empty():
 		return {}
 	
 	var result = {}
+	var row_id = _get_row_id_preview(row)
+	var errors_before_count = parsing_errors.size()
+	
+	# Gunakan temporary error log jika mode STRUCTURE_ONLY
+	var error_log = parsing_errors if _current_parse_mode == ParseMode.FULL_VALIDATION else []
 	
 	for field_name in schema:
 		var field_config = schema[field_name]
@@ -179,29 +321,62 @@ func _process_row(row: Array) -> Dictionary:
 			var nested_result = {}
 			for nested_key in nested_fields:
 				var nested_config = nested_fields[nested_key]
-				var nested_column = nested_config.get("column", -1)
+				var nested_header = nested_config.get("header_name", "").to_lower()
 				var nested_type = nested_config.get("type", "string")
 				var nested_default = nested_config.get("default", "")
 				
-				if nested_column < 0 or nested_column >= row.size():
+				# Lookup column index dari _header_map
+				if nested_header.is_empty() or not _header_map.has(nested_header):
 					nested_result[nested_key] = nested_default
 					continue
 				
-				var nested_raw = row[nested_column].strip_edges()
-				nested_result[nested_key] = FieldTransformers.transform(nested_raw, nested_type, nested_default)
+				var column_index = _header_map[nested_header]
+				if column_index >= row.size():
+					nested_result[nested_key] = nested_default
+					continue
+				
+				var nested_raw = row[column_index].strip_edges()
+				var context = "Baris %d [ID: %s], Kolom: %s.%s (header: %s)" % [row_number, row_id, field_name, nested_key, nested_header]
+				nested_result[nested_key] = FieldTransformers.transform(nested_raw, nested_type, nested_default, error_log, context, row_id, row_number, "%s.%s" % [field_name, nested_key])
 			result[field_name] = nested_result
 			continue
 		
 		# Handle normal fields
-		var column_index = field_config.get("column", -1)
+		var header_name = field_config.get("header_name", "").to_lower()
 		var default_value = field_config.get("default", "")
 		
-		if column_index < 0 or column_index >= row.size():
+		# Lookup column index dari _header_map
+		if header_name.is_empty() or not _header_map.has(header_name):
+			result[field_name] = default_value
+			continue
+		
+		var column_index = _header_map[header_name]
+		if column_index >= row.size():
 			result[field_name] = default_value
 			continue
 		
 		var raw_value = row[column_index].strip_edges()
-		result[field_name] = FieldTransformers.transform(raw_value, field_type, default_value)
+		var context = "Baris %d [ID: %s], Kolom: %s (header: %s)" % [row_number, row_id, field_name, header_name]
+		result[field_name] = FieldTransformers.transform(raw_value, field_type, default_value, error_log, context, row_id, row_number, field_name)
+	
+	# Jika Full Validasi maka track row_id dan kolom yang memiliki error
+	if _current_parse_mode == ParseMode.FULL_VALIDATION:
+		var errors_after_count = parsing_errors.size()
+		if errors_after_count > errors_before_count and not row_id.is_empty():
+			if not warning_row_ids.has(row_id):
+				warning_row_ids.append(row_id)
+			for i in range(errors_before_count, errors_after_count):
+				var err = parsing_errors[i]
+				if err is Dictionary:
+					var field_name_from_err = _extract_field_name_from_context(
+						err.get("field_name", ""),
+						err.get("message", ""),
+						err.get("field_name", "")
+					)
+					if field_name_from_err.is_empty():
+						continue
+					var detail = {"id": row_id, "column": field_name_from_err, "_pending_group": true}
+					warning_details.append(detail)
 	
 	# Skip rows with empty ID
 	var id_field = _get_id_field_name()
@@ -211,33 +386,96 @@ func _process_row(row: Array) -> Dictionary:
 	
 	return result
 
+
+## Ekstrak field name dari context string
+## Context format: "Baris X [ID: Y], Kolom: fieldName (header: ...)"
+func _extract_field_name_from_context(context: Variant, message: Variant = "", fallback_field: Variant = "") -> String:
+	var texts: Array = []
+	if typeof(context) == TYPE_STRING:
+		texts.append(context.strip_edges())
+	if typeof(message) == TYPE_STRING:
+		texts.append(message.strip_edges())
+	if typeof(fallback_field) == TYPE_STRING:
+		texts.append(fallback_field.strip_edges())
+	
+	for text in texts:
+		if text.is_empty():
+			continue
+		var kolom_idx = text.find("Kolom:")
+		if kolom_idx != -1:
+			var after_kolom = text.substr(kolom_idx + 6).strip_edges()
+			var header_idx = after_kolom.find(" (header:")
+			if header_idx != -1:
+				return after_kolom.substr(0, header_idx).strip_edges()
+			var dot_idx = after_kolom.find(".")
+			if dot_idx != -1:
+				return after_kolom.substr(0, dot_idx).strip_edges()
+			return after_kolom.strip_edges()
+		return text
+	return ""
+
+## Preview ID untuk baris (sebelum parsing penuh) menggunakan header mapping
+func _get_row_id_preview(row: Array) -> String:
+	if not id_header.is_empty() and _header_map.has(id_header):
+		var col_index = _header_map[id_header]
+		if col_index < row.size():
+			var id_val = row[col_index].strip_edges()
+			if not id_val.is_empty():
+				return id_val
+	return "tidak diketahui"
+
 ## Menyimpan data baris ke penyimpanan data
 func _store_row_data(row: Array, row_data: Dictionary) -> void:
 	var row_id = _get_row_id(row, row_data)
 	
-	if group_by_column >= 0 and row.size() > group_by_column:
-		var group_key = row[group_by_column].strip_edges()
-		
-		if group_key.is_empty():
-			if skip_empty_groups:
-				return
-			else:
-				group_key = default_group_name
-		
-		if not _data_rows.has(group_key):
-			_data_rows[group_key] = {}
-		_data_rows[group_key][row_id] = row_data
-	else:
-		_data_rows[row_id] = row_data
+	# Cek apakah grouping diaktifkan dan header ditemukan
+	if not group_header.is_empty() and _header_map.has(group_header):
+		var group_col = _header_map[group_header]
+		if group_col < row.size():
+			var group_key = row[group_col].strip_edges()
+			
+			if group_key.is_empty():
+				if skip_empty_groups:
+					return
+				else:
+					group_key = default_group_name
+			
+			if not _data_rows.has(group_key):
+				_data_rows[group_key] = {}
+			_data_rows[group_key][row_id] = row_data
+			
+			# Update warning_details dengan group info untuk row ini
+			_update_warning_details_with_group(row_id, group_key)
+			return
+	
+	# Tidak ada grouping, simpan langsung
+	_data_rows[row_id] = row_data
+
+
+## Update warning_details dengan group info untuk row_id tertentu
+## Hanya update detail yang memiliki marker _pending_group (baru ditambahkan di row ini)
+func _update_warning_details_with_group(row_id: String, group_key: String) -> void:
+	for i in range(warning_details.size()):
+		var detail = warning_details[i]
+		# Hanya update detail yang match row_id dan memiliki _pending_group marker
+		if detail.get("id") == row_id and detail.has("_pending_group"):
+			warning_details[i]["group"] = group_key
+			warning_details[i].erase("_pending_group")  # Hapus marker
 
 ## GET ID untuk baris data
 func _get_row_id(row: Array, row_data: Dictionary) -> String:
+	# Coba dari row_data (sudah di-transform)
 	var id_field = _get_id_field_name()
 	if id_field != "" and row_data.has(id_field):
 		return str(row_data[id_field])
 	
-	if id_column >= 0 and id_column < row.size():
-		return row[id_column].strip_edges()
+	# Coba dari row langsung via header mapping
+	if not id_header.is_empty() and _header_map.has(id_header):
+		var col_index = _header_map[id_header]
+		if col_index < row.size():
+			var id_val = row[col_index].strip_edges()
+			if not id_val.is_empty():
+				return id_val
 	
 	return str(randi())
 
@@ -251,7 +489,8 @@ func _get_id_field_name() -> String:
 ## Update list group yang tersedia
 func _update_available_groups() -> void:
 	_available_groups.clear()
-	if group_by_column >= 0:
+	# Jika grouping aktif, ambil semua group keys
+	if not group_header.is_empty() and _header_map.has(group_header):
 		for group in _data_rows.keys():
 			if not _available_groups.has(group):
 				_available_groups.append(group)
@@ -260,24 +499,46 @@ func _update_available_groups() -> void:
 
 ## Cek apakah baris ini adalah metadata
 func _is_metadata_row(row: Array) -> bool:
-	if metadata_column < 0 or metadata_column >= row.size():
+	if metadata_header.is_empty() or not _header_map.has(metadata_header):
 		return false
-	var meta_type = row[metadata_column].strip_edges()
+	
+	var meta_col = _header_map[metadata_header]
+	if meta_col >= row.size():
+		return false
+	
+	var meta_type = row[meta_col].strip_edges()
 	return supported_metadata_types.has(meta_type)
 
 ## Simpan metadata ke penyimpanan metadata
 func _store_metadata(row: Array) -> void:
-	if group_by_column < 0 or group_by_column >= row.size():
+	# Validasi group_header ada
+	if group_header.is_empty() or not _header_map.has(group_header):
 		return
 	
-	var group_key = row[group_by_column].strip_edges()
+	var group_col = _header_map[group_header]
+	if group_col >= row.size():
+		return
+	
+	var group_key = row[group_col].strip_edges()
 	if group_key.is_empty():
 		return
 	
-	var meta_type = row[metadata_column].strip_edges()
+	# Get metadata type
+	if metadata_header.is_empty() or not _header_map.has(metadata_header):
+		return
+	
+	var meta_col = _header_map[metadata_header]
+	if meta_col >= row.size():
+		return
+	
+	var meta_type = row[meta_col].strip_edges()
+	
+	# Get metadata value
 	var meta_value = ""
-	if metadata_value_column >= 0 and metadata_value_column < row.size():
-		meta_value = row[metadata_value_column].strip_edges()
+	if not metadata_value_header.is_empty() and _header_map.has(metadata_value_header):
+		var value_col = _header_map[metadata_value_header]
+		if value_col < row.size():
+			meta_value = row[value_col].strip_edges()
 	
 	if not _group_metadata.has(group_key):
 		_group_metadata[group_key] = {}
@@ -312,7 +573,9 @@ func get_filtered_data(selected_groups: Array) -> Dictionary:
 ## GET data dalam bentuk array	
 func get_data_as_array() -> Array:
 	var result = []
-	if group_by_column >= 0:
+	# Cek apakah data dikelompokkan
+	var is_grouped = not group_header.is_empty() and _header_map.has(group_header)
+	if is_grouped:
 		for group in _data_rows:
 			for id in _data_rows[group]:
 				result.append(_data_rows[group][id])

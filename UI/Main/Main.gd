@@ -31,12 +31,18 @@ var json_generator: Node
 var Group_Manager: GroupManager
 var current_csv_type: CSVConfig.CSVType = CSVConfig.CSVType.DIALOG
 
+# Error dialog
+var error_dialog: AcceptDialog
+var error_text_edit: TextEdit
+
 
 func _ready() -> void:
 	_init_components()
+	_init_error_dialog()
 	_connect_signals()
 	_update_status("Ready - Select CSV file and output location")
 	chapter_filter_container.visible = false
+
 func _init_components() -> void:
 	parser = CSVParserScript.new()
 	json_generator = JSONGeneratorScript.new()
@@ -44,6 +50,20 @@ func _init_components() -> void:
 	add_child(json_generator)
 	Group_Manager = GroupManager.new(chapter_checkbox_container)
 	Group_Manager.selection_changed.connect(_on_filter_selection_changed)
+
+func _init_error_dialog() -> void:
+	error_dialog = AcceptDialog.new()
+	error_dialog.title = "Error Log"
+	error_dialog.ok_button_text = "Close"
+	error_dialog.min_size = Vector2(600, 400)
+	
+	error_text_edit = TextEdit.new()
+	error_text_edit.editable = false
+	error_text_edit.custom_minimum_size = Vector2(580, 350)
+	error_text_edit.wrap_mode = TextEdit.LINE_WRAPPING_BOUNDARY
+	
+	error_dialog.add_child(error_text_edit)
+	add_child(error_dialog)
 
 
 func _connect_signals() -> void:
@@ -75,22 +95,43 @@ func _on_load_chapters_pressed() -> void:
 	var csv_path = file_path_edit.text.strip_edges()
 	
 	if csv_path.is_empty():
-		_update_status("Error: Please select a CSV file first")
+		_update_status("Error: Silakan pilih file CSV terlebih dahulu")
 		return
 	
-	_detect_and_configure(csv_path)
-	_update_status("Loading groups from CSV...")
+	_update_status("Mendeteksi tipe CSV...")
+	current_csv_type = CSVConfig.detect_type(csv_path)
 	
-	# Parse CSV
+	# Cegah proses jika tipe UNKNOWN
+	if current_csv_type == CSVConfig.CSVType.UNKNOWN:
+		_update_status("Error: Format CSV tidak dikenali")
+		var detailed_error = CSVConfig.get_detection_error(csv_path)
+		_show_error_report([detailed_error])
+		return
+	
+	CSVConfig.configure_all(parser, json_generator, current_csv_type)
+	var type_name = CSVConfig.get_type_name(current_csv_type)
+	_update_status("Terdeteksi: Format %s. Memuat grup..." % type_name)
+	
+	# Parse CSV dalam mode STRUCTURE_ONLY
+	parser.set_parse_mode(CSVParser.ParseMode.STRUCTURE_ONLY)
 	if not parser.parse_csv_from_path(csv_path):
-		_update_status("Error: Failed to parse CSV file")
+		_update_status("Error: Gagal memproses file CSV")
+		# Hanya tampilkan error struktural, bukan conversion errors
+		var structural_errors: Array[String] = []
+		for err in parser.parsing_errors:
+			if err is String:
+				structural_errors.append(err)
+		if not structural_errors.is_empty():
+			_show_error_report(structural_errors)
 		return
+	
+	# Tidak menampilkan popup warning untuk mode Load Chapters
 	
 	# Dapatkan groups yang tersedia
 	var groups = parser.get_available_groups()
 	
 	if groups.is_empty():
-		_update_status("No groups found in CSV file (flat data mode)")
+		_update_status("Tidak ada grup ditemukan (mode data flat)")
 		chapter_filter_container.visible = false
 		return
 	
@@ -99,7 +140,8 @@ func _on_load_chapters_pressed() -> void:
 	Group_Manager.populate(groups)
 	
 	var group_label = CSVConfig.get_group_label(current_csv_type)
-	_update_status("Found %d %s. Click to select/deselect." % [groups.size(), group_label])
+	var status_msg = "Ditemukan %d %s. Klik untuk memilih/membatalkan." % [groups.size(), group_label]
+	_update_status(status_msg)
 
 ## Callback saat filter diubah
 func _on_filter_selection_changed(selected: Array) -> void:
@@ -110,7 +152,6 @@ func _on_filter_selection_changed(selected: Array) -> void:
 func _reset_chapter_filter() -> void:
 	Group_Manager.clear()
 	chapter_filter_container.visible = false
-
 
 
 ## Fungsi utama untuk generate JSON dari CSV
@@ -124,32 +165,53 @@ func _on_generate_pressed() -> void:
 	if not output_path.ends_with(".json"):
 		output_path += ".json"
 	
-	_detect_and_configure(csv_path)
-	_update_status("Parsing CSV...")
+	_update_status("Mendeteksi tipe CSV...")
+	current_csv_type = CSVConfig.detect_type(csv_path)
 	
-	# Parse
+	# Cegah proses jika tipe UNKNOWN
+	if current_csv_type == CSVConfig.CSVType.UNKNOWN:
+		_update_status("Error: Format CSV tidak dikenali")
+		var detailed_error = CSVConfig.get_detection_error(csv_path)
+		_show_error_report([detailed_error])
+		return
+	
+	CSVConfig.configure_all(parser, json_generator, current_csv_type)
+	_update_status("Memproses CSV...")
+	
+	# Parse dalam mode FULL_VALIDATION
+	parser.set_parse_mode(CSVParser.ParseMode.FULL_VALIDATION)
 	if not parser.parse_csv_from_path(csv_path):
-		_update_status("Error: Failed to parse CSV file")
+		_update_status("Error: Gagal memproses file CSV")
+		if not parser.parsing_errors.is_empty():
+			_show_error_report(parser.get_error_messages())
 		return
 	
 	# Get data
 	var data_to_export = _get_export_data()
 	if data_to_export.is_empty():
-		_update_status("Error: No data to export.")
+		_update_status("Error: Tidak ada data untuk diekspor.")
 		return
 	
 	# Generate JSON
-	_update_status("Generating JSON...")
+	_update_status("Membuat JSON...")
 	_apply_root_name()
 	
 	var json_string = json_generator.generate_json_to_path(data_to_export, output_path)
 	if json_string.is_empty():
-		_update_status("Error: Failed to generate JSON")
+		_update_status("Error: Gagal membuat JSON")
 		return
 	
 	# Success
 	var group_label = CSVConfig.get_group_label(current_csv_type)
-	_update_status("Success! Exported %d %s to: %s" % [data_to_export.size(), group_label, output_path])
+	var status_msg = "Berhasil! Mengekspor %d %s ke: %s" % [data_to_export.size(), group_label, output_path]
+	
+	# Tampilkan warning jika ada dan hubungkan ke scene change
+	if parser.has_conversion_errors():
+		status_msg = "Selesai dengan peringatan! Mengekspor %d %s ke: %s" % [data_to_export.size(), group_label, output_path]
+		_update_status(status_msg)
+		_show_error_report_with_navigation(parser.get_error_messages(), output_path, parser.get_warning_row_ids(), parser.get_warning_details())
+	else:
+		_update_status(status_msg)
 
 ## Validasi path input
 func _validate_paths(csv_path: String, output_path: String) -> bool:
@@ -185,16 +247,62 @@ func _apply_root_name() -> void:
 
 
 
-## Deteksi tipe CSV dan konfigurasi parser dan generator
-func _detect_and_configure(csv_path: String) -> void:
-	current_csv_type = CSVConfig.detect_type(csv_path)
-	CSVConfig.configure_all(parser, json_generator, current_csv_type)
-	
-	var type_name = CSVConfig.get_type_name(current_csv_type)
-	_update_status("Detected: %s CSV format" % type_name)
-
-
 func _update_status(message: String) -> void:
 	status_label.text = "Status: " + message
+
+## Menampilkan popup laporan kesalahan (tanpa navigasi)
+func _show_error_report(errors: Array) -> void:
+	var error_text = "Ditemukan %d Error :\n\n" % errors.size()
+	for i in range(errors.size()):
+		error_text += "%d. %s\n\n" % [i + 1, errors[i]]
+	
+	error_text_edit.text = error_text
+	# Disconnect any previous connections to prevent navigation
+	if error_dialog.confirmed.is_connected(_on_error_dialog_confirmed):
+		error_dialog.confirmed.disconnect(_on_error_dialog_confirmed)
+	if error_dialog.canceled.is_connected(_on_error_dialog_confirmed):
+		error_dialog.canceled.disconnect(_on_error_dialog_confirmed)
+	error_dialog.popup_centered()
+
+## Menampilkan popup laporan kesalahan dengan navigasi ke JSON Viewer
+func _show_error_report_with_navigation(errors: Array, json_path: String, warning_ids: Array[String], warning_details: Array[Dictionary] = []) -> void:
+	print("[Main] _show_error_report_with_navigation called")
+	print("[Main] json_path: ", json_path)
+	print("[Main] warning_ids: ", warning_ids)
+	print("[Main] warning_details: ", warning_details)
+	
+	var error_text = "Ditemukan %d Warning/Error :\n\n" % errors.size()
+	for i in range(errors.size()):
+		error_text += "%d. %s\n\n" % [i + 1, errors[i]]
+	error_text_edit.text = error_text
+	
+	# Simpan data ke GlobalData autoload (akan persist antar scene)
+	# Gunakan warning_details jika tersedia, jika tidak gunakan warning_ids saja
+	if warning_details.size() > 0:
+		GlobalData.set_pending_data_with_details(json_path, warning_details)
+	else:
+		GlobalData.set_pending_data(json_path, warning_ids)
+	
+	# Connect signal untuk navigasi (pastikan hanya terkoneksi sekali)
+	if not error_dialog.confirmed.is_connected(_on_error_dialog_confirmed):
+		error_dialog.confirmed.connect(_on_error_dialog_confirmed)
+	if not error_dialog.canceled.is_connected(_on_error_dialog_confirmed):
+		error_dialog.canceled.connect(_on_error_dialog_confirmed)
+	
+	error_dialog.popup_centered()
+
+## Handler untuk dialog confirmed/canceled - navigasi ke JSON Viewer
+func _on_error_dialog_confirmed() -> void:
+	print("[Main] _on_error_dialog_confirmed called - navigating to JsonUI")
+	
+	# Disconnect signals setelah digunakan
+	if error_dialog.confirmed.is_connected(_on_error_dialog_confirmed):
+		error_dialog.confirmed.disconnect(_on_error_dialog_confirmed)
+	if error_dialog.canceled.is_connected(_on_error_dialog_confirmed):
+		error_dialog.canceled.disconnect(_on_error_dialog_confirmed)
+	
+	# Pindah ke JSON Viewer scene
+	get_tree().change_scene_to_file("res://UI/JSON UI/Json UI.tscn")
+
 func _on_open_json_viewer_pressed() -> void:
 	get_tree().change_scene_to_file("res://UI/JSON UI/Json UI.tscn")
