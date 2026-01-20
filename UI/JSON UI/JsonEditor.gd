@@ -324,3 +324,7 @@ static func get_type_string(value: Variant) -> String:
 		return "array"
 	else:
 		return "unknown"
+
+## Tandai status perubahan manual (dipakai saat data datang dari memori)
+func mark_unsaved_changes(flag: bool = true) -> void:
+	_has_unsaved_changes = flag

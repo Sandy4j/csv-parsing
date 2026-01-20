@@ -4,12 +4,13 @@ extends RefCounted
 ## Skrip untuk mengubah value field berdasarkan type
 
 ## Buat error dictionary dengan detail
-static func create_error(msg: String, r_id: String = "", line: int = 0, field: String = "") -> Dictionary:
+static func create_error(msg: String, r_id: String = "", line: int = 0, field: String = "", is_fatal: bool = false) -> Dictionary:
 	return {
 		"message": msg,
 		"row_id": r_id,
 		"line_number": line,
-		"field_name": field
+		"field_name": field,
+		"is_fatal": is_fatal
 	}
 
 ## Transform value berdasarkan type
@@ -62,9 +63,9 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 
 
 ## Catat error ke array jika tersedia (sekarang menyimpan Dictionary)
-static func _log_error(error_log: Array, message: String, row_id: String = "", line_number: int = 0, field: String = "") -> void:
+static func _log_error(error_log: Array, message: String, row_id: String = "", line_number: int = 0, field: String = "", is_fatal: bool = false) -> void:
 	if error_log != null and not message.is_empty():
-		var err = create_error(message, row_id, line_number, field)
+		var err = create_error(message, row_id, line_number, field, is_fatal)
 		error_log.append(err)
 
 
@@ -105,7 +106,7 @@ static func parse_scene_props(field: String, error_log: Array = [], context: Str
 	if parts.size() != 5 and not field.strip_edges().is_empty():
 		var msg = "Array scene_properties harus memiliki tepat 5 elemen (comma-separated), ditemukan %d elemen pada %s." % [parts.size(), context]
 		push_warning(msg)
-		_log_error(error_log, msg, row_id, line_number, field_name)
+		_log_error(error_log, msg, row_id, line_number, field_name, true)
 	
 	# Parse setiap part
 	for i in range(parts.size()):
@@ -150,7 +151,7 @@ static func parse_next_line(field: String, error_log: Array = [], context: Strin
 	if parts.size() != 5 and not field.strip_edges().is_empty():
 		var msg = "Array next_line_properties harus memiliki tepat 5 elemen (comma-separated), ditemukan %d elemen pada %s." % [parts.size(), context]
 		push_warning(msg)
-		_log_error(error_log, msg, row_id, line_number, field_name)
+		_log_error(error_log, msg, row_id, line_number, field_name, true)
 	
 	# Parse setiap part
 	for part in parts:
@@ -188,4 +189,3 @@ static func parse_traits(field: String, error_log: Array = [], context: String =
 				_log_error(error_log, msg, row_id, line_number, context)
 			result[keys[i]] = 0
 	return result
-

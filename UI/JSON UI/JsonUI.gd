@@ -37,6 +37,7 @@ var _editing_original_type: String = ""
 var _container_item: TreeItem = null
 var _container_path: Array = []
 var _container_is_array: bool = false
+var prevent_auto_save: bool = false
 
 func _ready() -> void:
 	json_editor = JsonEditor.new()
@@ -56,8 +57,10 @@ func _load_pending_data() -> void:
 	var path = pending_data.path
 	var warning_ids_raw = pending_data.warning_ids
 	var warning_details_raw = pending_data.get("warning_details", [])
+	var json_text = pending_data.get("json_text", "")
+	prevent_auto_save = pending_data.get("prevent_auto_save", false)
 	
-	print("[JsonUI] Loading pending data - path: ", path, ", warning_ids: ", warning_ids_raw, ", warning_details: ", warning_details_raw)
+	print("[JsonUI] Loading pending data - path: ", path, ", warning_ids: ", warning_ids_raw, ", warning_details: ", warning_details_raw, ", has_json_text: ", not json_text.is_empty(), ", prevent_auto_save: ", prevent_auto_save)
 	
 	# Set path di UI
 	file_path_edit.text = path
@@ -70,6 +73,27 @@ func _load_pending_data() -> void:
 		# Fallback ke warning_ids saja (legacy)
 		tree_handler.set_warning_ids_variant(warning_ids_raw)
 	
+	# Jika ada JSON text in-memory, parse langsung tanpa membaca file
+	if not json_text.is_empty():
+		var json = JSON.new()
+		var parse_err = json.parse(json_text)
+		if parse_err != OK:
+			update_status("Error: Invalid pending JSON - " + json.get_error_message())
+			return
+		current_json_data = json.data
+		json_editor.init(current_json_data, current_file_path)
+		json_editor.mark_unsaved_changes(true)
+		tree_handler.set_data(current_json_data)
+		print("[JsonTree] Warning IDs set from variant: ", tree_handler.get_warning_ids())
+		tree_handler.build_tree(current_json_data)
+		if warning_details_raw.size() > 0:
+			update_status("Loaded pending JSON (unsaved) dengan %d warning fields" % warning_details_raw.size())
+		elif warning_ids_raw.size() > 0:
+			update_status("Loaded pending JSON (unsaved) dengan %d warning items" % warning_ids_raw.size())
+		else:
+			update_status("Loaded pending JSON (unsaved)")
+		return
+	
 	# Load file JSON
 	_load_json_file(path)
 	
@@ -77,6 +101,8 @@ func _load_pending_data() -> void:
 		update_status("Loaded with %d warning fields highlighted in RED" % warning_details_raw.size())
 	elif warning_ids_raw.size() > 0:
 		update_status("Loaded with %d warning items highlighted in RED" % warning_ids_raw.size())
+	if prevent_auto_save:
+		update_status("Warning fatal: perbaiki data lalu Save. File belum disimpan.")
 
 func _connect_signals() -> void:
 	browse_button.pressed.connect(_on_browse_pressed)
@@ -223,6 +249,11 @@ func _apply_edit() -> void:
 	
 	# Update via JsonEditor
 	if json_editor.edit_value(_editing_path, new_value):
+		# Jika sedang dalam mode prevent_auto_save, anggap perbaikan dilakukan: hapus warning list agar Save bisa jalan
+		if prevent_auto_save and tree_handler.get_warning_ids().size() > 0:
+			tree_handler.clear_warning_ids()
+			prevent_auto_save = false
+			update_status("Warnings cleared setelah edit. Silakan Save.")
 		# Rebuild tree untuk menampilkan perubahan
 		current_json_data = json_editor.get_data()
 		tree_handler.build_tree(current_json_data)
@@ -245,6 +276,10 @@ func _on_edit_cancel_pressed() -> void:
 func _on_save_pressed() -> void:
 	if current_file_path.is_empty():
 		update_status("Error: No file loaded")
+		return
+	
+	if prevent_auto_save and tree_handler.get_warning_ids().size() > 0:
+		update_status("Perbaiki warning fatal (array 5 elemen) dulu sebelum Save.")
 		return
 	
 	if not json_editor.has_unsaved_changes():

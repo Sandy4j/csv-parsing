@@ -78,7 +78,7 @@ func _is_warning_column(row_id: String, column_name: String, group_name: String 
 				if group_name.is_empty() or detail_group == group_name:
 					return true
 			else:
-				# Warning detail tanpa group (legacy), selalu match
+				# Warning detail tanpa group selalu match
 				return true
 	return false
 
@@ -233,17 +233,24 @@ func _add_tree_items(parent: TreeItem, data: Variant, key: String, filter_text: 
 		if current_path.size() == 1:
 			current_group_name = key
 		# Cek apakah dictionary ini adalah row data dengan ID
+		var is_row_node := false
 		if data.has("id"):
 			current_row_id = _normalize_id(data["id"])
+			is_row_node = true
 		elif data.has("lineid"):
 			current_row_id = _normalize_id(data["lineid"])
+			is_row_node = true
+		elif data.has("ID"):
+			current_row_id = _normalize_id(data["ID"])
+			is_row_node = true
 
 		# Cek apakah row ini memiliki warning (untuk highlight parent dengan warna orange)
-		var row_has_warning = _row_has_any_warning(current_row_id, current_group_name)
-		if row_has_warning:
-			print("[JsonTree] Row %s (group: %s) has warning - applying ORANGE to parent dict" % [current_row_id, current_group_name])
-			item.set_custom_color(0, Color.ORANGE)
-			item.set_meta("has_warning", true)
+		if is_row_node:
+			var row_has_warning = _row_has_any_warning(current_row_id, current_group_name)
+			if row_has_warning:
+				print("[JsonTree] Row %s (group: %s) has warning - applying ORANGE to parent dict" % [current_row_id, current_group_name])
+				item.set_custom_color(0, Color.ORANGE)
+				item.set_meta("has_warning", true)
 		
 		# Rekursif untuk menambahkan item baru untuk setiap item di dictionary
 		for dict_key in data.keys():
@@ -320,7 +327,6 @@ static func format_value(value: Variant) -> String:
 ## Fungsi expand/collapse semua item di tree
 func expand_all() -> void:
 	_set_all_collapsed(false)
-
 func collapse_all() -> void:
 	_set_all_collapsed(true)
 

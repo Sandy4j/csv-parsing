@@ -37,6 +37,9 @@ var warning_row_ids: Array[String] = []  # Array untuk menyimpan row_id yang ber
 var warning_details: Array[Dictionary] = []
 var _current_parse_mode: ParseMode = ParseMode.FULL_VALIDATION
 
+# Fatal warning collection
+var fatal_warnings: Array[Dictionary] = []
+
 
 ## SET Configuration
 func set_schema(new_schema: Dictionary) -> CSVParser:
@@ -86,6 +89,10 @@ func has_conversion_errors() -> bool:
 			return true
 	return false
 
+## Cek apakah ada fatal warnings
+func has_fatal_warnings() -> bool:
+	return not fatal_warnings.is_empty()
+
 ## GET warning row IDs
 func get_warning_row_ids() -> Array[String]:
 	return warning_row_ids
@@ -102,6 +109,14 @@ func get_error_messages() -> Array[String]:
 			messages.append(err.message)
 		elif err is String:
 			messages.append(err)
+	return messages
+
+## GET fatal error messages sebagai array string (untuk tampilan UI)
+func get_fatal_error_messages() -> Array[String]:
+	var messages: Array[String] = []
+	for err in fatal_warnings:
+		if err is Dictionary and err.has("message"):
+			messages.append(err.message)
 	return messages
 
 
@@ -273,6 +288,7 @@ func _clear_data() -> void:
 	parsing_errors.clear()
 	warning_row_ids.clear()
 	warning_details.clear()
+	fatal_warnings.clear()
 
 ## Mengubah satu baris CSV menjadi array
 func _parse_csv_line(line: String) -> Array:
@@ -368,6 +384,8 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 			for i in range(errors_before_count, errors_after_count):
 				var err = parsing_errors[i]
 				if err is Dictionary:
+					if err.get("is_fatal", false):
+						fatal_warnings.append(err)
 					var field_name_from_err = _extract_field_name_from_context(
 						err.get("field_name", ""),
 						err.get("message", ""),

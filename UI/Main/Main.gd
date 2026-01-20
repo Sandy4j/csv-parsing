@@ -196,20 +196,27 @@ func _on_generate_pressed() -> void:
 	_update_status("Membuat JSON...")
 	_apply_root_name()
 	
-	var json_string = json_generator.generate_json_to_path(data_to_export, output_path)
+	var fatal_array_issue: bool = parser.has_fatal_warnings()
+	var json_string: String = ""
+	if fatal_array_issue:
+		json_string = json_generator.generate_json_string(data_to_export)
+	else:
+		json_string = json_generator.generate_json_to_path(data_to_export, output_path)
+	
 	if json_string.is_empty():
 		_update_status("Error: Gagal membuat JSON")
 		return
 	
-	# Success
 	var group_label = CSVConfig.get_group_label(current_csv_type)
 	var status_msg = "Berhasil! Mengekspor %d %s ke: %s" % [data_to_export.size(), group_label, output_path]
 	
 	# Tampilkan warning jika ada dan hubungkan ke scene change
 	if parser.has_conversion_errors():
-		status_msg = "Selesai dengan peringatan! Mengekspor %d %s ke: %s" % [data_to_export.size(), group_label, output_path]
+		status_msg = "Selesai dengan peringatan! %d %s diproses" % [data_to_export.size(), group_label]
+		if fatal_array_issue:
+			status_msg = "Peringatan fatal: array wajib 5 elemen. File belum disimpan. Buka editor untuk perbaiki lalu Save." 
 		_update_status(status_msg)
-		_show_error_report_with_navigation(parser.get_error_messages(), output_path, parser.get_warning_row_ids(), parser.get_warning_details())
+		_show_error_report_with_navigation(parser.get_error_messages(), output_path, parser.get_warning_row_ids(), parser.get_warning_details(), json_string if fatal_array_issue else "", fatal_array_issue)
 	else:
 		_update_status(status_msg)
 
@@ -265,23 +272,26 @@ func _show_error_report(errors: Array) -> void:
 	error_dialog.popup_centered()
 
 ## Menampilkan popup laporan kesalahan dengan navigasi ke JSON Viewer
-func _show_error_report_with_navigation(errors: Array, json_path: String, warning_ids: Array[String], warning_details: Array[Dictionary] = []) -> void:
+func _show_error_report_with_navigation(errors: Array, json_path: String, warning_ids: Array[String], warning_details: Array[Dictionary] = [], json_text: String = "", prevent_auto_save: bool = false) -> void:
 	print("[Main] _show_error_report_with_navigation called")
 	print("[Main] json_path: ", json_path)
 	print("[Main] warning_ids: ", warning_ids)
 	print("[Main] warning_details: ", warning_details)
+	print("[Main] prevent_auto_save: ", prevent_auto_save)
 	
 	var error_text = "Ditemukan %d Warning/Error :\n\n" % errors.size()
 	for i in range(errors.size()):
 		error_text += "%d. %s\n\n" % [i + 1, errors[i]]
+	if prevent_auto_save:
+		error_text += "Catatan: File belum disimpan otomatis karena warning fatal array (wajib 5 elemen)."
 	error_text_edit.text = error_text
 	
 	# Simpan data ke GlobalData autoload (akan persist antar scene)
 	# Gunakan warning_details jika tersedia, jika tidak gunakan warning_ids saja
 	if warning_details.size() > 0:
-		GlobalData.set_pending_data_with_details(json_path, warning_details)
+		GlobalData.set_pending_data_with_details(json_path, warning_details, json_text, prevent_auto_save)
 	else:
-		GlobalData.set_pending_data(json_path, warning_ids)
+		GlobalData.set_pending_data(json_path, warning_ids, json_text, prevent_auto_save)
 	
 	# Connect signal untuk navigasi (pastikan hanya terkoneksi sekali)
 	if not error_dialog.confirmed.is_connected(_on_error_dialog_confirmed):
