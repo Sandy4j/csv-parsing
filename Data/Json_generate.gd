@@ -18,6 +18,8 @@ var indent_string: String = "\t"
 var compact_arrays: bool = true
 var compact_threshold: int = 60
 var no_root_wrapper: bool = false
+# Internal flags
+var _is_recipe_config: bool = false
 
 ## SET Functions
 func set_key_order(order: Array) -> JSONGenerator:
@@ -44,19 +46,30 @@ func set_no_root_wrapper(no_root: bool) -> JSONGenerator:
 func configure_for_dialog() -> JSONGenerator:
 	key_order = DataSchemas.get_dialog_key_order()
 	output_format = OutputFormat.GROUPED
+	_is_recipe_config = false
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
 
 func configure_for_ingredient() -> JSONGenerator:
 	key_order = DataSchemas.get_ingredient_key_order()
 	output_format = OutputFormat.GROUPED
+	_is_recipe_config = false
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
 
 func configure_for_item() -> JSONGenerator:
 	key_order = DataSchemas.get_item_key_order()
 	output_format = OutputFormat.GROUPED
+	_is_recipe_config = false
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
+	return self
+
+func configure_for_recipe() -> JSONGenerator:
+	key_order = DataSchemas.get_recipe_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "Foods"
+	no_root_wrapper = false
+	_is_recipe_config = true
 	return self
 
 func configure_for_array(custom_key_order: Array = [], root: String = "Data") -> JSONGenerator:
@@ -64,6 +77,7 @@ func configure_for_array(custom_key_order: Array = [], root: String = "Data") ->
 	output_format = OutputFormat.ARRAY
 	root_name = root
 	no_root_wrapper = false
+	_is_recipe_config = false
 	return self
 
 ## Fungsi untuk membuat JSON dari data dan menyimpannya ke file
@@ -93,7 +107,13 @@ func generate_json_string(data) -> String:
 	if data is Array and data.is_empty():
 		push_error("Data is empty")
 		return ""
-	
+
+	# Force default root untuk recipe jika dikosongkan dari UI dan pastikan tetap pakai wrapper
+	if _is_recipe_config:
+		if root_name.strip_edges().is_empty():
+			root_name = "Foods"
+		no_root_wrapper = false
+
 	# Jika no_root_wrapper = true, gunakan format tanpa root
 	if no_root_wrapper:
 		if data is Dictionary:
@@ -101,6 +121,11 @@ func generate_json_string(data) -> String:
 		elif data is Array:
 			return _stringify_array_no_root(data)
 	
+	# Force default root untuk recipe jika dikosongkan dari UI
+	if _is_recipe_config and root_name.strip_edges().is_empty():
+		root_name = "Foods"
+		no_root_wrapper = false
+
 	match output_format:
 		OutputFormat.GROUPED:
 			return _stringify_grouped(data)

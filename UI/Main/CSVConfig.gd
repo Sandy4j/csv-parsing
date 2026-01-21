@@ -7,6 +7,7 @@ enum CSVType {
 	DIALOG,
 	INGREDIENT,
 	ITEM,
+	RECIPE,
 	UNKNOWN
 }
 
@@ -31,6 +32,13 @@ const TYPE_CONFIGS: Dictionary = {
 		"root_name": "",
 		"header_patterns": [["ingredientid", "ingredient name", "type"]],
 		"required_headers": ["ingredientid", "ingredient name"]
+	},
+	CSVType.RECIPE: {
+		"name": "recipe",
+		"group_label": "foods",
+		"root_name": "Foods",
+		"header_patterns": [["foodid", "name", "base ingredients"]],
+		"required_headers": ["foodid", "name"]
 	},
 	CSVType.UNKNOWN: {
 		"name": "unknown",
@@ -116,6 +124,11 @@ static func get_detection_error(csv_path: String) -> String:
 static func _detect_from_header(header: String) -> CSVType:
 	header = header.to_lower()
 	
+	# Check RECIPE type (harus ada foodid dan base ingredients)
+	for pattern in TYPE_CONFIGS[CSVType.RECIPE]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.RECIPE
+	
 	# Check ITEM type (paling spesifik - harus ada IngredientId dan Ingredient Name)
 	for pattern in TYPE_CONFIGS[CSVType.ITEM]["header_patterns"]:
 		if _matches_pattern(header, pattern):
@@ -152,6 +165,8 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_item()
 		CSVType.DIALOG:
 			parser.configure_for_dialog()
+		CSVType.RECIPE:
+			parser.configure_for_recipe()
 		CSVType.UNKNOWN:
 			push_warning("CSVConfig: Tidak dapat mengkonfigurasi parser untuk tipe UNKNOWN")
 
@@ -165,6 +180,8 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_item()
 		CSVType.DIALOG:
 			generator.configure_for_dialog()
+		CSVType.RECIPE:
+			generator.configure_for_recipe()
 		CSVType.UNKNOWN:
 			push_warning("CSVConfig: Tidak dapat mengkonfigurasi generator untuk tipe UNKNOWN")
 

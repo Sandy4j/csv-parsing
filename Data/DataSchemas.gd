@@ -146,3 +146,75 @@ static func get_item_config() -> Dictionary:
 		"supported_metadata_types": [],
 		"key_order": get_item_key_order(),
 	}
+	
+	
+## Schema untuk Recipe Data CSV
+static func get_recipe_schema() -> Dictionary:
+	return {
+		"id": {"header_name": "FoodId", "type": "int", "is_id": true},
+		"nameEnglish": {"header_name": "Name", "type": "string", "default": ""},
+		"nameIndonesian": {"header_name": "", "type": "string", "default": null},
+		"description": {"header_name": "Description", "type": "string", "default": ""},
+		"description1": {"header_name": "Description Custom 1", "type": "string", "default": ""},
+		"description2": {"header_name": "Description Custom 2", "type": "string", "default": ""},
+		"description3": {"header_name": "Description Custom 3", "type": "string", "default": ""},
+		"iconBig": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconHovered": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconFocused": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconFull": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconDefault": {"header_name": "filename", "type": "string", "default": ""},
+		"icon3": {"header_name": "", "type": "string", "default": "none"},
+		"icon2": {"header_name": "", "type": "string", "default": "none"},
+		"icon1": {"header_name": "", "type": "string", "default": "none"},
+		"iconEmpty": {"header_name": "", "type": "string", "default": "none"},
+		"recipe": {
+			"type": "nested",
+			"fields": {
+				"base_ingredient_id": {"header_name": "Base Ingredients", "type": "recipe_ingredient", "default": -1},
+				"seasoning_1_id": {"header_name": "Seasoning 1", "type": "recipe_ingredient", "default": -1},
+				"seasoning_2_id": {"header_name": "Seasoning 2", "type": "recipe_ingredient", "default": -1}
+			}
+		},
+		"trait": {"header_name": "Trait", "type": "trait_text", "default": ""},
+		"traits": {
+			"type": "nested",
+			"fields": {
+				"richness": {"header_name": "Richness", "type": "int", "default": 0},
+				"boldness": {"header_name": "Boldness", "type": "int", "default": 0},
+				"fanciness": {"header_name": "Fanciness", "type": "int", "default": 0}
+			}
+		},
+		"price": {"header_name": "Sell Price", "type": "int", "default": 0},
+		"eat_duration": {"header_name": "eat_duration", "type": "int", "default": 0}
+	}
+
+
+## Key order untuk Recipe JSON output
+static func get_recipe_key_order() -> Array:
+	return [
+		"id", "nameEnglish", "nameIndonesian", 
+		"description", "description1", "description2", "description3",
+		"iconBig", "iconHovered", "iconFocused", "iconFull", "iconDefault",
+		"icon3", "icon2", "icon1", "iconEmpty",
+		"recipe", "trait", "traits", "price", "eat_duration"
+	]
+
+
+## Recipe parser configuration
+static func get_recipe_config() -> Dictionary:
+	return {
+		"schema": get_recipe_schema(),
+		"group_header": "",               # No grouping for recipes
+		"header_row": 0,                  # Baris ke-0 adalah header
+		"start_row": 3,                   # Data dimulai baris ke-2 (skip header)
+		"id_header": "foodid",            # FoodId sebagai ID
+		"metadata_header": "",            # No metadata
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_recipe_key_order(),
+		"output_wrapper": "Foods",        # Wrap output in "Foods" key
+		"skip_non_numeric_id": true       # Skip rows with non-numeric IDs (like POU, MEA)
+	}	
+	
+	
+

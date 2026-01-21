@@ -58,6 +58,10 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 			return parse_next_line(raw_value, error_log, context, row_id, line_number, field_name if not field_name.is_empty() else "next_line_properties")
 		"traits":
 			return parse_traits(raw_value, error_log, context, row_id, line_number)
+		"trait_text":
+			return raw_value  # Trait text is passed through as-is, calculated separately
+		"recipe_ingredient":
+			return parse_recipe_ingredient(raw_value)
 		_:
 			return raw_value
 
@@ -189,3 +193,80 @@ static func parse_traits(field: String, error_log: Array = [], context: String =
 				_log_error(error_log, msg, row_id, line_number, context)
 			result[keys[i]] = 0
 	return result
+
+
+## Parse recipe ingredient name to ID
+## Returns -1 for invalid ingredients (-, Bebas, empty)
+static func parse_recipe_ingredient(raw_value: String) -> int:
+	var trimmed = raw_value.strip_edges()
+	if trimmed.is_empty() or trimmed == "-" or trimmed.to_lower() == "bebas":
+		return -1
+	# Ingredient ID mapping
+	var base_map = {
+		"red meat": 1,
+		"poultry": 2,
+		"seafood": 3,
+		"tofu": 4,
+	}
+	
+	var seasoning_map = {
+		"peanut sauce": 5,
+		"soy sauce": 9,
+		"butter": 11,
+		"shoyu": 15
+	}
+	
+	var ingredient_map = {}
+	for k in base_map.keys():
+		ingredient_map[k] = base_map[k]
+	for k in seasoning_map.keys():
+		ingredient_map[k] = seasoning_map[k]
+	
+	var key = trimmed.to_lower()
+	if ingredient_map.has(key):
+		return ingredient_map[key]
+	return -1
+
+## Return sebagai kombinasi teks (e.g., "Light  Luxurious")
+static func calculate_trait_text(richness: int, boldness: int, fanciness: int) -> String:
+	var richness_text = _get_richness_text(richness)
+	var boldness_text = _get_boldness_text(boldness)
+	var fanciness_text = _get_fanciness_text(fanciness)
+	
+	return richness_text + boldness_text + fanciness_text
+
+static func _get_richness_text(value: int) -> String:
+	if value < -3:
+		return "Plain "
+	elif value >= -3 and value < 0:
+		return "Light "
+	elif value == 0:
+		return " "
+	elif value > 0 and value <= 3:
+		return "Rich "
+	else:  # value > 3
+		return "Savory "
+		
+static func _get_boldness_text(value: int) -> String:
+	if value < -3:
+		return "Delicate "
+	elif value >= -3 and value < 0:
+		return "Mild "
+	elif value == 0:
+		return " "
+	elif value > 0 and value <= 3:
+		return "Bold "
+	else:  # value > 3
+		return "Strong "
+		
+static func _get_fanciness_text(value: int) -> String:
+	if value < -3:
+		return "Modest"
+	elif value >= -3 and value < 0:
+		return "Traditional"
+	elif value == 0:
+		return " "
+	elif value > 0 and value <= 3:
+		return "Fancy"
+	else:  # value > 3
+		return "Luxurious"

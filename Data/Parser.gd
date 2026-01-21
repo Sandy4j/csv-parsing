@@ -158,6 +158,18 @@ func configure_for_item() -> CSVParser:
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
+func configure_for_recipe() -> CSVParser:
+	var config = DataSchemas.get_recipe_config()
+	schema = config.schema
+	group_header = config.group_header
+	header_row = config.header_row
+	start_row = config.start_row
+	id_header = config.id_header
+	metadata_header = config.metadata_header
+	metadata_value_header = config.metadata_value_header
+	supported_metadata_types = config.supported_metadata_types
+	return self
+
 
 ## Fungsi untuk parsing CSV file
 func parse_csv_from_path(file_path: String) -> bool:
@@ -346,14 +358,14 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 					nested_result[nested_key] = nested_default
 					continue
 				
-				var column_index = _header_map[nested_header]
-				if column_index >= row.size():
+				var nested_col_index = _header_map[nested_header]
+				if nested_col_index >= row.size():
 					nested_result[nested_key] = nested_default
 					continue
 				
-				var nested_raw = row[column_index].strip_edges()
-				var context = "Baris %d [ID: %s], Kolom: %s.%s (header: %s)" % [row_number, row_id, field_name, nested_key, nested_header]
-				nested_result[nested_key] = FieldTransformers.transform(nested_raw, nested_type, nested_default, error_log, context, row_id, row_number, "%s.%s" % [field_name, nested_key])
+				var nested_raw = row[nested_col_index].strip_edges()
+				var nested_context = "Baris %d [ID: %s], Kolom: %s.%s (header: %s)" % [row_number, row_id, field_name, nested_key, nested_header]
+				nested_result[nested_key] = FieldTransformers.transform(nested_raw, nested_type, nested_default, error_log, nested_context, row_id, row_number, "%s.%s" % [field_name, nested_key])
 			result[field_name] = nested_result
 			continue
 		
@@ -401,6 +413,19 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 	if id_field != "" and result.has(id_field):
 		if str(result[id_field]).strip_edges().is_empty():
 			return {}
+	
+	# Calculate trait text untuk recipe jika traits dan trait field ada
+	if result.has("traits") and result.has("trait"):
+		var traits = result.get("traits", {})
+		if traits is Dictionary:
+			var richness = traits.get("richness", 0)
+			var boldness = traits.get("boldness", 0)
+			var fanciness = traits.get("fanciness", 0)
+			# Hanya calculate jika ada nilai valid (bukan default -9999)
+			if richness != -9999 and boldness != -9999 and fanciness != -9999:
+				result["trait"] = FieldTransformers.calculate_trait_text(richness, boldness, fanciness)
+			else:
+				result["trait"] = "   "  # Default 3 spasi untuk invalid values
 	
 	return result
 
