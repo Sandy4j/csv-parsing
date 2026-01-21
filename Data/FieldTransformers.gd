@@ -28,14 +28,14 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 			return raw_value
 		"int":
 			if raw_value.is_valid_int():
-				return int(raw_value.to_int())
+				return raw_value.to_int()
 			else:
-				var default_int = int(default_value) if default_value != null else 0
+				var default_int = default_value if default_value != null else 0
 				if not raw_value.is_empty():
 					var msg = "Konversi Integer Gagal: '%s' pada %s. Menggunakan default: %s" % [raw_value, context, str(default_int)]
 					push_warning(msg)
 					_log_error(error_log, msg, row_id, line_number, field_name if not field_name.is_empty() else context)
-				return int(default_int)
+				return default_int
 		"float":
 			if raw_value.is_valid_float():
 				return raw_value.to_float()
@@ -64,15 +64,15 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 			return parse_recipe_ingredient(raw_value)
 		"int_dash":
 			if raw_value == "-" or raw_value.is_empty():
-				return int(default_value) if default_value != null else 0
+				return default_value if default_value != null else 0
 			if raw_value.is_valid_int():
-				return int(raw_value.to_int())
+				return raw_value.to_int()
 			else:
-				var default_int = int(default_value) if default_value != null else 0
+				var default_int = default_value if default_value != null else 0
 				var msg_int = "Konversi Integer Gagal: '%s' pada %s. Menggunakan default: %s" % [raw_value, context, str(default_int)]
 				push_warning(msg_int)
 				_log_error(error_log, msg_int, row_id, line_number, field_name if not field_name.is_empty() else context)
-				return int(default_int)
+				return default_int
 		"alcohol_flag":
 			var lowered = raw_value.to_lower()
 			if lowered == "alcohol":

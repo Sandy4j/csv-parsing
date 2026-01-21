@@ -146,18 +146,6 @@ func configure_for_ingredient() -> CSVParser:
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
-func configure_for_item() -> CSVParser:
-	var config = DataSchemas.get_item_config()
-	schema = config.schema
-	group_header = config.group_header
-	header_row = config.header_row
-	start_row = config.start_row
-	id_header = config.id_header
-	metadata_header = config.metadata_header
-	metadata_value_header = config.metadata_value_header
-	supported_metadata_types = config.supported_metadata_types
-	return self
-
 func configure_for_recipe() -> CSVParser:
 	var config = DataSchemas.get_recipe_config()
 	schema = config.schema
@@ -335,6 +323,7 @@ func _clear_data() -> void:
 ## Mengubah satu baris CSV menjadi array
 func _parse_csv_line(line: String) -> Array:
 	# Cek apakah seluruh baris dibungkus kutip ganda (bad CSV export)
+	# Contoh: "2,Amer,Alcohol,..." dimana seluruh baris dibungkus
 	var trimmed = line.strip_edges()
 	
 	# Cek apakah dimulai dan diakhiri dengan kutip
@@ -346,7 +335,7 @@ func _parse_csv_line(line: String) -> Array:
 		# coba unwrap dan parse lagi
 		if normal_result.size() == 1:
 			var inner = trimmed.substr(1, trimmed.length() - 2)
-			# Konversi escaped quotes dari outer wrapping
+			# PENTING: Konversi escaped quotes dari outer wrapping
 			# Di dalam wrapped line, "" menjadi " untuk field yang dikutip
 			# Tapi kita perlu membedakan antara:
 			# - "" di awal field (opener) -> jadi "
@@ -359,7 +348,8 @@ func _parse_csv_line(line: String) -> Array:
 			if unwrapped_result.size() > normal_result.size():
 				return unwrapped_result
 		
-		# Jika jumlah kolom normal terlalu sedikit dibanding yang diharapkan dan header sudah di-parse, coba unwrap
+		# Jika jumlah kolom normal terlalu sedikit dibanding yang diharapkan
+		# dan header sudah di-parse, coba unwrap
 		if _header_map.size() > 0 and normal_result.size() < _header_map.size():
 			var inner = trimmed.substr(1, trimmed.length() - 2)
 			inner = inner.replace('""', '"')
@@ -516,8 +506,10 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 			else:
 				result["trait"] = "   "  # Default 3 spasi untuk invalid values
 	
+	# Terapkan default icon khusus ingredient berdasarkan tipe
+	_apply_ingredient_icon_defaults(row, result)
+	
 	return result
-
 
 ## Ekstrak field name dari context string
 ## Context format: "Baris X [ID: Y], Kolom: fieldName (header: ...)"
@@ -574,6 +566,8 @@ func _store_row_data(row: Array, row_data: Dictionary) -> void:
 		var group_col = _header_map[group_header]
 		if group_col < row.size():
 			var group_key = row[group_col].strip_edges()
+			# Normalisasi khusus ingredient agar sesuai contoh JSON
+			group_key = _normalize_group_key(group_key)
 			
 			if group_key.is_empty():
 				if skip_empty_groups:
@@ -591,6 +585,15 @@ func _store_row_data(row: Array, row_data: Dictionary) -> void:
 	
 	# Tidak ada grouping, simpan langsung
 	_data_rows[row_id] = row_data
+
+func _normalize_group_key(group_key: String) -> String:
+	if group_header == "type":
+		var lowered = group_key.to_lower()
+		if lowered == "base":
+			return "Main"
+		if lowered == "seasoning":
+			return "Seasoning"
+	return group_key
 
 
 ## Update warning_details dengan group info untuk row_id tertentu
@@ -738,3 +741,29 @@ func _merge_metadata_into_data(data: Dictionary) -> Dictionary:
 		for item_key in data[group_key]:
 			result[group_key][item_key] = data[group_key][item_key]
 	return result
+
+func _apply_ingredient_icon_defaults(row: Array, row_data: Dictionary) -> void:
+	if not row_data.has("iconBig") or not _header_map.has(group_header):
+		return
+	var type_value := ""
+	if group_header != "" and _header_map.has(group_header):
+		var type_col = _header_map[group_header]
+		if type_col < row.size():
+			type_value = row[type_col].strip_edges().to_lower()
+	if type_value == "seasoning":
+		for field in ["iconBig", "iconHovered", "iconFocused", "iconFull"]:
+			if row_data.get(field, "") in ["", "placeholder"]:
+				row_data[field] = "none"
+	elif type_value == "base":
+		for field in ["iconBig", "iconHovered", "iconFocused", "iconFull"]:
+			if row_data.get(field, "") == "":
+				row_data[field] = "placeholder"
+		# Hapus field ekonomi yang tidak muncul di contoh Base
+		if row_data.has("unlockPrice") and row_data.get("unlockPrice", 0) == 0:
+			row_data.erase("unlockPrice")
+		if row_data.has("shopLocation") and str(row_data.get("shopLocation", "")).strip_edges() == "":
+			row_data.erase("shopLocation")
+	elif type_value != "":
+		for field in ["iconBig", "iconHovered", "iconFocused", "iconFull"]:
+			if row_data.get(field, "") == "":
+				row_data[field] = "placeholder"

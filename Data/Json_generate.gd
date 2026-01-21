@@ -63,14 +63,6 @@ func configure_for_ingredient() -> JSONGenerator:
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
 
-func configure_for_item() -> JSONGenerator:
-	key_order = DataSchemas.get_item_key_order()
-	output_format = OutputFormat.GROUPED
-	_is_recipe_config = false
-	_force_root_wrapper = false
-	_default_root_name = ""
-	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
-	return self
 
 func configure_for_recipe() -> JSONGenerator:
 	key_order = DataSchemas.get_recipe_key_order()
@@ -406,6 +398,7 @@ func _value_to_json(value, indent_level: int = 0) -> String:
 	elif value is int:
 		return str(value)
 	elif value is float:
+		# Jika float tanpa pecahan, tampilkan sebagai int agar tidak jadi 1.0 di JSON
 		if int(value) == value:
 			return str(int(value))
 		return str(value)

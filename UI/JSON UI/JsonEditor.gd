@@ -7,27 +7,6 @@ signal value_changed(json_path: Array, new_value: Variant)
 signal json_saved(path: String)
 signal save_failed(error: String)
 
-# Definisi urutan key yang akan disimpan
-const KEY_ORDER = [
-	"lineid",
-	"name",
-	"character",
-	"text",
-	"left",
-	"middle_right",
-	"middle",
-	"middle_left",
-	"right",
-	"scene_properties",
-	"dialogue_choice",
-	"next_line_properties",
-	"give_item",
-	"chapterid",
-	"goto",
-	"special_effects",
-	"sound_effect",
-	"music_effect"
-]
 
 var _json_data: Variant = null
 var _file_path: String = ""
@@ -202,7 +181,12 @@ func stringify_ordered(data: Variant, indent_level: int = 0) -> String:
 		return "null"
 	elif data is bool:
 		return "true" if data else "false"
-	elif data is int or data is float:
+	elif data is int:
+		return str(data)
+	elif data is float:
+		# Jika float adalah bilangan bulat, tampilkan tanpa desimal
+		if is_equal_approx(data, round(data)):
+			return str(int(data))
 		return str(data)
 	elif data is String:
 		return "\"%s\"" % _escape_json_string(data)
@@ -232,32 +216,9 @@ func stringify_ordered(data: Variant, indent_level: int = 0) -> String:
 	else:
 		return "\"%s\"" % str(data)
 
-## GET keys dalam urutan yang sudah ditentukan
+## GET keys dalam urutan asli (urutan sudah diatur oleh JSON generator via DataSchemas)
 func _get_ordered_keys(dict: Dictionary) -> Array:
-	var keys = dict.keys()
-	var ordered_keys = []
-	
-	# Cek apakah ini adalah row data (memiliki key dari KEY_ORDER)
-	var has_key_order_keys = false
-	for key in KEY_ORDER:
-		if dict.has(key):
-			has_key_order_keys = true
-			break
-	
-	if has_key_order_keys:
-		# Gunakan KEY_ORDER untuk mengurutkan
-		for key in KEY_ORDER:
-			if dict.has(key):
-				ordered_keys.append(key)
-		# Tambahkan key lain yang tidak ada di KEY_ORDER
-		for key in keys:
-			if key not in ordered_keys:
-				ordered_keys.append(key)
-	else:
-		# Gunakan urutan asli
-		ordered_keys = keys
-	
-	return ordered_keys
+	return dict.keys()
 
 ## Escape karakter khusus dalam string JSON
 func _escape_json_string(s: String) -> String:
@@ -291,6 +252,12 @@ static func parse_value_string(value_str: String, original_type: String) -> Vari
 			if value_str.is_valid_float():
 				return value_str.to_float()
 			return value_str
+		"number":
+			if value_str.is_valid_int():
+				return value_str.to_int()
+			elif value_str.is_valid_float():
+				return value_str.to_float()
+			return value_str
 		_:
 			# Auto-detect type
 			if value_str.to_lower() == "null":
@@ -312,10 +279,9 @@ static func get_type_string(value: Variant) -> String:
 		return "null"
 	elif value is bool:
 		return "bool"
-	elif value is int:
-		return "int"
-	elif value is float:
-		return "float"
+	elif value is int or value is float:
+		# JSON tidak membedakan int dan float, tampilkan sebagai "number"
+		return "number"
 	elif value is String:
 		return "string"
 	elif value is Dictionary:

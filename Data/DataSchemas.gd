@@ -56,25 +56,25 @@ static func get_dialog_config() -> Dictionary:
 ## Schema untuk Ingredient Data CSV
 static func get_ingredient_schema() -> Dictionary:
 	return {
-		"id": {"header_name": "id", "type": "int", "is_id": true},
-		"nameEnglish": {"header_name": "name", "type": "string", "default": ""},
-		"nameIndonesian": {"header_name": "name_id", "type": "string", "default": null},
-		"description": {"header_name": "description", "type": "string", "default": ""},
-		"iconBig": {"header_name": "icon", "type": "string", "default": "placeholder"},
-		"iconHovered": {"header_name": "icon", "type": "string", "default": "placeholder"},
-		"iconFocused": {"header_name": "icon", "type": "string", "default": "placeholder"},
-		"iconDefault": {"header_name": "icon", "type": "string", "default": ""},
-		"iconFull": {"header_name": "icon", "type": "string", "default": ""},
+		"id": {"header_name": "IngredientId", "type": "int", "is_id": true},
+		"nameEnglish": {"header_name": "Ingredient Name", "type": "string", "default": ""},
+		"nameIndonesian": {"header_name": "", "type": "string", "default": null},
+		"description": {"header_name": "Description", "type": "string", "default": ""},
+		"iconBig": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconHovered": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconFocused": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconDefault": {"header_name": "filename_default", "type": "string", "default": ""},
+		"iconFull": {"header_name": "", "type": "string", "default": ""},
 		"traits": {
 			"type": "nested",
 			"fields": {
-				"richness": {"header_name": "richness", "type": "int", "default": 0},
-				"boldness": {"header_name": "boldness", "type": "int", "default": 0},
-				"fanciness": {"header_name": "fanciness", "type": "int", "default": 0}
+				"richness": {"header_name": "Richness Gain", "type": "int", "default": 0},
+				"boldness": {"header_name": "Boldness Gain", "type": "int", "default": 0},
+				"fanciness": {"header_name": "Fanciness Gain", "type": "int", "default": 0}
 			}
 		},
-		"unlockPrice": {"header_name": "unlock_price", "type": "float", "default": 0.0},
-		"shopLocation": {"header_name": "shop_location", "type": "string", "default": "-"}
+		"unlockPrice": {"header_name": "Unlock Price", "type": "int_dash", "default": 0},
+		"shopLocation": {"header_name": "Where to Get", "type": "string", "default": ""}
 	}
 
 
@@ -94,7 +94,7 @@ static func get_ingredient_config() -> Dictionary:
 		"group_header": "type",           # Group by Type header
 		"header_row": 0,                  # Baris ke-0 adalah header
 		"start_row": 1,                   # Skip header row
-		"id_header": "id",                # id sebagai ID
+		"id_header": "ingredientid",     # IngredientId sebagai ID
 		"metadata_header": "",            # No metadata
 		"metadata_value_header": "",
 		"supported_metadata_types": [],
@@ -102,52 +102,6 @@ static func get_ingredient_config() -> Dictionary:
 	}
 
 
-## Schema untuk Item Data CSV
-static func get_item_schema() -> Dictionary:
-	return {
-		"id": {"header_name": "IngredientId", "type": "int", "is_id": true},
-		"name": {"header_name": "Ingredient Name", "type": "string", "default": ""},
-		"type": {"header_name": "Type", "type": "string", "default": ""},
-		"description": {"header_name": "Description", "type": "string", "default": ""},
-		"traits": {
-			"type": "nested",
-			"fields": {
-				"richness": {"header_name": "Richness Gain", "type": "int", "default": 0},
-				"boldness": {"header_name": "Boldness Gain", "type": "int", "default": 0},
-				"fanciness": {"header_name": "Fanciness Gain", "type": "int", "default": 0}
-			}
-		},
-		"unlockPrice": {"header_name": "Unlock Price", "type": "int", "default": 0},
-		"buyPrice": {"header_name": "Buy Price", "type": "int", "default": 0},
-		"icon": {"header_name": "filename_default", "type": "string", "default": ""},
-		"shopLocation": {"header_name": "Where to Get", "type": "string", "default": "-"}
-	}
-
-
-## Key order untuk Item JSON output
-static func get_item_key_order() -> Array:
-	return [
-		"id", "name", "type", "description",
-		"traits", "unlockPrice", "buyPrice",
-		"icon", "shopLocation"
-	]
-
-
-## Item parser configuration
-static func get_item_config() -> Dictionary:
-	return {
-		"schema": get_item_schema(),
-		"group_header": "type",           # Group by Type column
-		"header_row": 0,                  # Baris ke-0 adalah header
-		"start_row": 1,                   # Data dimulai baris ke-2 (skip header)
-		"id_header": "ingredientid",      # IngredientId sebagai ID
-		"metadata_header": "",            # No metadata
-		"metadata_value_header": "",
-		"supported_metadata_types": [],
-		"key_order": get_item_key_order(),
-	}
-	
-	
 ## Schema untuk Recipe Data CSV
 static func get_recipe_schema() -> Dictionary:
 	return {
@@ -220,7 +174,7 @@ static func get_recipe_config() -> Dictionary:
 ## Schema untuk Beverage Data CSV
 static func get_beverage_schema() -> Dictionary:
 	return {
-		"id": {"header_name": "id", "type": "int", "default": 0, "is_id": true},
+		"id": {"header_name": "", "column_index": 0, "type": "int", "default": 0, "is_id": true},
 		"isAlcohol": {"header_name": "type", "type": "alcohol_flag", "default": false},
 		"nameEnglish": {"header_name": "name", "type": "string", "default": ""},
 		"nameIndonesian": {"header_name": "", "type": "string", "default": "placeholder"},
@@ -254,13 +208,13 @@ static func get_beverage_config() -> Dictionary:
 		"group_header": "",            
 		"header_row": 0,
 		"start_row": 3,
-		"id_header": "id",               
+		"id_header": "",               
 		"metadata_header": "",         
 		"metadata_value_header": "",
 		"supported_metadata_types": [],
 		"key_order": get_beverage_key_order(),
 		"output_wrapper": "Beverage",
-		"skip_non_numeric_id": true
+		"skip_non_numeric_id": false
 	}
 	
 ## Schema untuk Decoration Data CSV

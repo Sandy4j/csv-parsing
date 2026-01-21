@@ -321,6 +321,13 @@ static func format_value(value: Variant) -> String:
 		return '"%s"' % value
 	elif value is bool:
 		return "true" if value else "false"
+	elif value is int:
+		return str(value)
+	elif value is float:
+		# Jika float adalah bilangan bulat, tampilkan tanpa desimal
+		if is_equal_approx(value, round(value)):
+			return str(int(value))
+		return str(value)
 	else:
 		return str(value)
 
@@ -379,5 +386,12 @@ static func value_to_edit_string(value: Variant) -> String:
 		return value
 	elif value is bool:
 		return "true" if value else "false"
+	elif value is int:
+		return str(value)
+	elif value is float:
+		# Jika float adalah bilangan bulat, tampilkan tanpa desimal
+		if is_equal_approx(value, round(value)):
+			return str(int(value))
+		return str(value)
 	else:
 		return str(value)

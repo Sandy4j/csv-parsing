@@ -6,7 +6,6 @@ extends RefCounted
 enum CSVType {
 	DIALOG,
 	INGREDIENT,
-	ITEM,
 	RECIPE,
 	BEVERAGE,
 	DECORATION,
@@ -27,13 +26,6 @@ const TYPE_CONFIGS: Dictionary = {
 		"root_name": "",
 		"header_patterns": [["ingredientid"], ["ingredient name"], ["item", "type"]],
 		"required_headers": []
-	},
-	CSVType.ITEM: {
-		"name": "item",
-		"group_label": "types",
-		"root_name": "",
-		"header_patterns": [["ingredientid", "ingredient name", "type"]],
-		"required_headers": ["ingredientid", "ingredient name"]
 	},
 	CSVType.RECIPE: {
 		"name": "recipe",
@@ -122,11 +114,6 @@ static func _detect_from_header(header: String, suppress_warning: bool = false) 
 		if _matches_pattern(header, pattern):
 			return CSVType.DECORATION
 	
-	# Check ITEM type (paling spesifik - harus ada IngredientId dan Ingredient Name)
-	for pattern in TYPE_CONFIGS[CSVType.ITEM]["header_patterns"]:
-		if _matches_pattern(header, pattern):
-			return CSVType.ITEM
-
 	# Check INGREDIENT type
 	for pattern in TYPE_CONFIGS[CSVType.INGREDIENT]["header_patterns"]:
 		if _matches_pattern(header, pattern):
@@ -155,8 +142,6 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 	match csv_type:
 		CSVType.INGREDIENT:
 			parser.configure_for_ingredient()
-		CSVType.ITEM:
-			parser.configure_for_item()
 		CSVType.DIALOG:
 			parser.configure_for_dialog()
 		CSVType.RECIPE:
@@ -174,8 +159,6 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 	match csv_type:
 		CSVType.INGREDIENT:
 			generator.configure_for_ingredient()
-		CSVType.ITEM:
-			generator.configure_for_item()
 		CSVType.DIALOG:
 			generator.configure_for_dialog()
 		CSVType.RECIPE:
