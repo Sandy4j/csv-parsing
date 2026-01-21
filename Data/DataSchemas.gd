@@ -213,8 +213,86 @@ static func get_recipe_config() -> Dictionary:
 		"supported_metadata_types": [],
 		"key_order": get_recipe_key_order(),
 		"output_wrapper": "Foods",        # Wrap output in "Foods" key
-		"skip_non_numeric_id": true       # Skip rows with non-numeric IDs (like POU, MEA)
+		"skip_non_numeric_id": true
 	}	
-	
-	
 
+
+## Schema untuk Beverage Data CSV
+static func get_beverage_schema() -> Dictionary:
+	return {
+		"id": {"header_name": "id", "type": "int", "default": 0, "is_id": true},
+		"isAlcohol": {"header_name": "type", "type": "alcohol_flag", "default": false},
+		"nameEnglish": {"header_name": "name", "type": "string", "default": ""},
+		"nameIndonesian": {"header_name": "", "type": "string", "default": "placeholder"},
+		"description": {"header_name": "description", "type": "string", "default": ""},
+		"shop": {"header_name": "shop", "type": "string", "default": ""},
+		"keyword": {"header_name": "keywords (unused)", "type": "string", "default": ""},
+		"trait": {"header_name": "trait", "type": "string", "default": ""},
+		"iconBig": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconHovered": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconFocused": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconFull": {"header_name": "", "type": "string", "default": "placeholder"},
+		"iconDefault": {"header_name": "filename", "type": "string", "default": ""},
+		"buyPrice": {"header_name": "buy price", "type": "int_dash", "default": 0},
+		"sellPrice": {"header_name": "sell price", "type": "int_dash", "default": 0}
+	}
+
+
+## Key order untuk Beverage JSON output
+static func get_beverage_key_order() -> Array:
+	return [
+		"id", "isAlcohol", "nameEnglish", "nameIndonesian", "description",
+		"shop", "keyword", "trait", "iconBig", "iconHovered", "iconFocused",
+		"iconFull", "iconDefault", "buyPrice", "sellPrice"
+	]
+
+
+## Beverage parser configuration
+static func get_beverage_config() -> Dictionary:
+	return {
+		"schema": get_beverage_schema(),
+		"group_header": "",            
+		"header_row": 0,
+		"start_row": 3,
+		"id_header": "id",               
+		"metadata_header": "",         
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_beverage_key_order(),
+		"output_wrapper": "Beverage",
+		"skip_non_numeric_id": true
+	}
+	
+## Schema untuk Decoration Data CSV
+static func get_decoration_schema() -> Dictionary:
+	return {
+		"id": {"header_name": "no.", "column_index": 0, "type": "int", "default": 0, "is_id": true},
+		"type": {"header_name": "type", "type": "string", "default": ""},
+		"nameEnglish": {"header_name": "name", "type": "string", "default": ""},
+		"price": {"header_name": "price", "type": "int", "default": 0},
+		"description": {"header_name": "description", "type": "string", "default": ""},
+		"sprite": {"header_name": "", "type": "string", "default": "placeholder"},
+		"fileName": {"header_name": "filename", "type": "string", "default": ""}
+	}
+
+## Key order untuk Decoration JSON output
+static func get_decoration_key_order() -> Array:
+	return [
+		"id", "type", "nameEnglish", "price",
+		"description", "sprite", "fileName"
+	]
+	
+## Decoration parser configuration
+static func get_decoration_config() -> Dictionary:
+	return {
+		"schema": get_decoration_schema(),
+		"group_header": "",
+		"header_row": 1,
+		"start_row": 2,
+		"id_header": "",
+		"metadata_header": "",
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_decoration_key_order(),
+		"output_wrapper": "Decorations",
+	}

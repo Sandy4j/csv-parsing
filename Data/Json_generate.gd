@@ -20,6 +20,8 @@ var compact_threshold: int = 60
 var no_root_wrapper: bool = false
 # Internal flags
 var _is_recipe_config: bool = false
+var _force_root_wrapper: bool = false
+var _default_root_name: String = ""
 
 ## SET Functions
 func set_key_order(order: Array) -> JSONGenerator:
@@ -47,6 +49,8 @@ func configure_for_dialog() -> JSONGenerator:
 	key_order = DataSchemas.get_dialog_key_order()
 	output_format = OutputFormat.GROUPED
 	_is_recipe_config = false
+	_force_root_wrapper = false
+	_default_root_name = ""
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
 
@@ -54,6 +58,8 @@ func configure_for_ingredient() -> JSONGenerator:
 	key_order = DataSchemas.get_ingredient_key_order()
 	output_format = OutputFormat.GROUPED
 	_is_recipe_config = false
+	_force_root_wrapper = false
+	_default_root_name = ""
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
 
@@ -61,6 +67,8 @@ func configure_for_item() -> JSONGenerator:
 	key_order = DataSchemas.get_item_key_order()
 	output_format = OutputFormat.GROUPED
 	_is_recipe_config = false
+	_force_root_wrapper = false
+	_default_root_name = ""
 	# no_root_wrapper ditentukan oleh UI (jika root name kosong = true)
 	return self
 
@@ -70,6 +78,28 @@ func configure_for_recipe() -> JSONGenerator:
 	root_name = "Foods"
 	no_root_wrapper = false
 	_is_recipe_config = true
+	_force_root_wrapper = true
+	_default_root_name = "Foods"
+	return self
+
+func configure_for_beverage() -> JSONGenerator:
+	key_order = DataSchemas.get_beverage_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "Beverage"
+	no_root_wrapper = false
+	_is_recipe_config = false
+	_force_root_wrapper = true
+	_default_root_name = "Beverage"
+	return self
+
+func configure_for_decoration() -> JSONGenerator:
+	key_order = DataSchemas.get_decoration_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "Decorations"
+	no_root_wrapper = false
+	_is_recipe_config = false
+	_force_root_wrapper = true
+	_default_root_name = "Decorations"
 	return self
 
 func configure_for_array(custom_key_order: Array = [], root: String = "Data") -> JSONGenerator:
@@ -78,6 +108,8 @@ func configure_for_array(custom_key_order: Array = [], root: String = "Data") ->
 	root_name = root
 	no_root_wrapper = false
 	_is_recipe_config = false
+	_force_root_wrapper = false
+	_default_root_name = ""
 	return self
 
 ## Fungsi untuk membuat JSON dari data dan menyimpannya ke file
@@ -114,6 +146,12 @@ func generate_json_string(data) -> String:
 			root_name = "Foods"
 		no_root_wrapper = false
 
+	# Force default root jika konfigurasi mengharuskan wrapper
+	if _force_root_wrapper:
+		if root_name.strip_edges().is_empty():
+			root_name = _default_root_name
+		no_root_wrapper = false
+
 	# Jika no_root_wrapper = true, gunakan format tanpa root
 	if no_root_wrapper:
 		if data is Dictionary:
@@ -121,9 +159,9 @@ func generate_json_string(data) -> String:
 		elif data is Array:
 			return _stringify_array_no_root(data)
 	
-	# Force default root untuk recipe jika dikosongkan dari UI
-	if _is_recipe_config and root_name.strip_edges().is_empty():
-		root_name = "Foods"
+	# Jika mode recipe atau konfigurasi memaksa root dan root kosong, set default
+	if _force_root_wrapper and root_name.strip_edges().is_empty():
+		root_name = _default_root_name
 		no_root_wrapper = false
 
 	match output_format:
@@ -365,7 +403,11 @@ func _value_to_json(value, indent_level: int = 0) -> String:
 		return "\"%s\"" % _escape_json_string(value)
 	elif value is bool:
 		return "true" if value else "false"
-	elif value is int or value is float:
+	elif value is int:
+		return str(value)
+	elif value is float:
+		if int(value) == value:
+			return str(int(value))
 		return str(value)
 	elif value is Array:
 		return _array_to_json(value, indent_level)

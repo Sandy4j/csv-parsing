@@ -170,6 +170,30 @@ func configure_for_recipe() -> CSVParser:
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
+func configure_for_beverage() -> CSVParser:
+	var config = DataSchemas.get_beverage_config()
+	schema = config.schema
+	group_header = config.group_header
+	header_row = config.header_row
+	start_row = config.start_row
+	id_header = config.id_header
+	metadata_header = config.metadata_header
+	metadata_value_header = config.metadata_value_header
+	supported_metadata_types = config.supported_metadata_types
+	return self
+
+func configure_for_decoration() -> CSVParser:
+	var config = DataSchemas.get_decoration_config()
+	schema = config.schema
+	group_header = config.group_header
+	header_row = config.header_row
+	start_row = config.start_row
+	id_header = config.id_header
+	metadata_header = config.metadata_header
+	metadata_value_header = config.metadata_value_header
+	supported_metadata_types = config.supported_metadata_types
+	return self
+
 
 ## Fungsi untuk parsing CSV file
 func parse_csv_from_path(file_path: String) -> bool:
@@ -268,12 +292,18 @@ func _validate_schema_headers() -> void:
 			for nested_key in nested_fields:
 				var nested_config = nested_fields[nested_key]
 				var header_name = nested_config.get("header_name", "").to_lower()
+				var has_column_index = nested_config.has("column_index")
+				if header_name.is_empty() and has_column_index:
+					continue
 				if not header_name.is_empty() and not _header_map.has(header_name):
 					var msg = "Header tidak ditemukan: '%s' untuk field '%s.%s'. Akan menggunakan nilai default." % [header_name, field_name, nested_key]
 					push_warning(msg)
 					parsing_errors.append(msg)
 		else:
 			var header_name = field_config.get("header_name", "").to_lower()
+			var has_column_index = field_config.has("column_index")
+			if header_name.is_empty() and has_column_index:
+				continue
 			if not header_name.is_empty() and not _header_map.has(header_name):
 				var msg = "Header tidak ditemukan: '%s' untuk field '%s'. Akan menggunakan nilai default." % [header_name, field_name]
 				push_warning(msg)
@@ -304,6 +334,45 @@ func _clear_data() -> void:
 
 ## Mengubah satu baris CSV menjadi array
 func _parse_csv_line(line: String) -> Array:
+	# Cek apakah seluruh baris dibungkus kutip ganda (bad CSV export)
+	var trimmed = line.strip_edges()
+	
+	# Cek apakah dimulai dan diakhiri dengan kutip
+	if trimmed.begins_with('"') and trimmed.ends_with('"') and trimmed.length() > 2:
+		# Parse normal dulu
+		var normal_result = _parse_csv_line_internal(trimmed)
+		
+		# Jika hasil normal hanya 1 kolom (seluruh baris jadi satu field),
+		# coba unwrap dan parse lagi
+		if normal_result.size() == 1:
+			var inner = trimmed.substr(1, trimmed.length() - 2)
+			# Konversi escaped quotes dari outer wrapping
+			# Di dalam wrapped line, "" menjadi " untuk field yang dikutip
+			# Tapi kita perlu membedakan antara:
+			# - "" di awal field (opener) -> jadi "
+			# - "" di akhir field (closer) -> jadi "
+			# - "" di tengah (literal quote) -> jadi "
+			# Setelah unwrap outer, semua "" seharusnya menjadi " untuk parsing internal
+			inner = inner.replace('""', '"')
+			var unwrapped_result = _parse_csv_line_internal(inner)
+			# Jika unwrapped menghasilkan lebih banyak kolom, gunakan itu
+			if unwrapped_result.size() > normal_result.size():
+				return unwrapped_result
+		
+		# Jika jumlah kolom normal terlalu sedikit dibanding yang diharapkan dan header sudah di-parse, coba unwrap
+		if _header_map.size() > 0 and normal_result.size() < _header_map.size():
+			var inner = trimmed.substr(1, trimmed.length() - 2)
+			inner = inner.replace('""', '"')
+			var unwrapped_result = _parse_csv_line_internal(inner)
+			if unwrapped_result.size() >= _header_map.size():
+				return unwrapped_result
+		
+		return normal_result
+	
+	return _parse_csv_line_internal(line)
+
+## Internal CSV line parser
+func _parse_csv_line_internal(line: String) -> Array:
 	var result = []
 	var current_field = ""
 	var in_quotes = false
@@ -352,19 +421,17 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 				var nested_header = nested_config.get("header_name", "").to_lower()
 				var nested_type = nested_config.get("type", "string")
 				var nested_default = nested_config.get("default", "")
-				
-				# Lookup column index dari _header_map
-				if nested_header.is_empty() or not _header_map.has(nested_header):
+				var use_column_index = nested_config.has("column_index")
+				var nested_col_index = nested_config.get("column_index", -1)
+				if not nested_header.is_empty() and _header_map.has(nested_header):
+					nested_col_index = _header_map[nested_header]
+				elif use_column_index:
+					nested_col_index = nested_config.column_index
+				if nested_col_index < 0 or nested_col_index >= row.size():
 					nested_result[nested_key] = nested_default
 					continue
-				
-				var nested_col_index = _header_map[nested_header]
-				if nested_col_index >= row.size():
-					nested_result[nested_key] = nested_default
-					continue
-				
 				var nested_raw = row[nested_col_index].strip_edges()
-				var nested_context = "Baris %d [ID: %s], Kolom: %s.%s (header: %s)" % [row_number, row_id, field_name, nested_key, nested_header]
+				var nested_context = "Baris %d [ID: %s], Kolom: %s.%s" % [row_number, row_id, field_name, nested_key]
 				nested_result[nested_key] = FieldTransformers.transform(nested_raw, nested_type, nested_default, error_log, nested_context, row_id, row_number, "%s.%s" % [field_name, nested_key])
 			result[field_name] = nested_result
 			continue
@@ -372,19 +439,24 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 		# Handle normal fields
 		var header_name = field_config.get("header_name", "").to_lower()
 		var default_value = field_config.get("default", "")
+		var use_column_index = field_config.has("column_index")
+		var column_index = field_config.get("column_index", -1)
 		
-		# Lookup column index dari _header_map
-		if header_name.is_empty() or not _header_map.has(header_name):
+		# Lookup column index dari _header_map atau fallback column_index
+		if not header_name.is_empty() and _header_map.has(header_name):
+			column_index = _header_map[header_name]
+		elif use_column_index:
+			column_index = field_config.column_index
+		else:
 			result[field_name] = default_value
 			continue
 		
-		var column_index = _header_map[header_name]
-		if column_index >= row.size():
+		if column_index >= row.size() or column_index < 0:
 			result[field_name] = default_value
 			continue
 		
 		var raw_value = row[column_index].strip_edges()
-		var context = "Baris %d [ID: %s], Kolom: %s (header: %s)" % [row_number, row_id, field_name, header_name]
+		var context = "Baris %d [ID: %s], Kolom: %s" % [row_number, row_id, field_name]
 		result[field_name] = FieldTransformers.transform(raw_value, field_type, default_value, error_log, context, row_id, row_number, field_name)
 	
 	# Jika Full Validasi maka track row_id dan kolom yang memiliki error
@@ -411,8 +483,25 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 	# Skip rows with empty ID
 	var id_field = _get_id_field_name()
 	if id_field != "" and result.has(id_field):
-		if str(result[id_field]).strip_edges().is_empty():
+		var id_val = result[id_field]
+		# Skip jika ID kosong
+		if str(id_val).strip_edges().is_empty():
 			return {}
+		# Skip jika ID adalah 0 (default dari konversi gagal) dan raw value bukan "0"
+		if id_val == 0:
+			# Cek raw value dari kolom ID
+			var id_col = -1
+			var id_config = schema.get(id_field, {})
+			var id_header = id_config.get("header_name", "").to_lower()
+			if not id_header.is_empty() and _header_map.has(id_header):
+				id_col = _header_map[id_header]
+			elif id_config.has("column_index"):
+				id_col = id_config.get("column_index", -1)
+			if id_col >= 0 and id_col < row.size():
+				var raw_id = row[id_col].strip_edges()
+				# Jika raw bukan "0" tapi hasil konversi 0, berarti konversi gagal - skip baris ini
+				if raw_id != "0" and not raw_id.is_valid_int():
+					return {}
 	
 	# Calculate trait text untuk recipe jika traits dan trait field ada
 	if result.has("traits") and result.has("trait"):
@@ -465,6 +554,15 @@ func _get_row_id_preview(row: Array) -> String:
 			var id_val = row[col_index].strip_edges()
 			if not id_val.is_empty():
 				return id_val
+	# Fallback: cari field dengan is_id dan column_index
+	for field_name in schema:
+		var cfg = schema[field_name]
+		if cfg.get("is_id", false) and cfg.has("column_index"):
+			var idx = int(cfg.get("column_index", -1))
+			if idx >= 0 and idx < row.size():
+				var raw_id = row[idx].strip_edges()
+				if not raw_id.is_empty():
+					return raw_id
 	return "tidak diketahui"
 
 ## Menyimpan data baris ke penyimpanan data

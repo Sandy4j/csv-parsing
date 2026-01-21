@@ -8,6 +8,8 @@ enum CSVType {
 	INGREDIENT,
 	ITEM,
 	RECIPE,
+	BEVERAGE,
+	DECORATION,
 	UNKNOWN
 }
 
@@ -40,6 +42,20 @@ const TYPE_CONFIGS: Dictionary = {
 		"header_patterns": [["foodid", "name", "base ingredients"]],
 		"required_headers": ["foodid", "name"]
 	},
+	CSVType.BEVERAGE: {
+		"name": "beverage",
+		"group_label": "items",
+		"root_name": "Beverage",
+		"header_patterns": [["name", "type", "description", "buy price", "sell price", "filename"]],
+		"required_headers": ["name", "type", "filename"]
+	},
+	CSVType.DECORATION: {
+		"name": "decoration",
+		"group_label": "items",
+		"root_name": "Decorations",
+		"header_patterns": [["no.", "type", "filename", "name", "price", "description"]],
+		"required_headers": ["no.", "name", "filename"]
+	},
 	CSVType.UNKNOWN: {
 		"name": "unknown",
 		"group_label": "items",
@@ -57,10 +73,20 @@ static func detect_type(csv_path: String) -> CSVType:
 		push_warning("CSVConfig: Gagal membuka file CSV: " + csv_path)
 		return CSVType.UNKNOWN
 	
-	var first_line = file.get_line().to_lower()
+	var headers: Array = []
+	while not file.eof_reached() and headers.size() < 3:
+		headers.append(file.get_line().to_lower())
 	file.close()
 	
-	return _detect_from_header(first_line)
+	for header_line in headers:
+		var detected = _detect_from_header(header_line, true)
+		if detected != CSVType.UNKNOWN:
+			return detected
+	
+	# Jika tetap tidak terdeteksi, warn sekali dengan header pertama
+	if headers.size() > 0:
+		push_warning("CSVConfig: Format CSV tidak dikenali. Header: " + headers[0])
+	return CSVType.UNKNOWN
 
 
 ## Get detailed error message saat CSV type UNKNOWN
@@ -75,53 +101,10 @@ static func get_detection_error(csv_path: String) -> String:
 	var header = first_line.to_lower()
 	var error_msg = "Format CSV tidak dikenali.\n\n"
 	error_msg += "Header yang ditemukan:\n%s\n\n" % first_line
-	error_msg += "Format yang didukung:\n\n"
-	
-	# Dialog format
-	error_msg += "1. DIALOG CSV:\n"
-	error_msg += "   Wajib ada header: 'lineid' dan 'text'\n"
-	error_msg += "   Contoh: lineid,Name,text,character,...\n\n"
-	
-	# Ingredient format  
-	error_msg += "2. INGREDIENT CSV:\n"
-	error_msg += "   Wajib ada salah satu:\n"
-	error_msg += "   - Header 'ingredientid'\n"
-	error_msg += "   - Header 'ingredient name'\n"
-	error_msg += "   - Header 'item' dan 'type'\n\n"
-	
-	# Item format
-	error_msg += "3. ITEM CSV:\n"
-	error_msg += "   Wajib ada header: 'ingredientid', 'ingredient name', dan 'type'\n"
-	error_msg += "   Contoh: IngredientId,Ingredient Name,Type,Description,...\n\n"
-	
-	# Analisis header yang hilang
-	error_msg += "Analisis header Anda:\n"
-	
-	# Check Dialog
-	var has_lineid = header.find("lineid") >= 0
-	var has_text = header.find("text") >= 0
-	if not has_lineid and not has_text:
-		error_msg += "✗ Bukan Dialog (tidak ada 'lineid' dan 'text')\n"
-	elif not has_lineid:
-		error_msg += "✗ Bukan Dialog (tidak ada 'lineid')\n"
-	elif not has_text:
-		error_msg += "✗ Bukan Dialog (tidak ada 'text')\n"
-	
-	# Check Item/Ingredient
-	var has_ingredientid = header.find("ingredientid") >= 0
-	var has_ingredient_name = header.find("ingredient name") >= 0
-	var has_type = header.find("type") >= 0
-	
-	if not has_ingredientid and not has_ingredient_name:
-		error_msg += "✗ Bukan Item/Ingredient (tidak ada 'ingredientid' atau 'ingredient name')\n"
-	elif has_ingredientid and has_ingredient_name and not has_type:
-		error_msg += "✗ Hampir cocok Item, tapi tidak ada kolom 'type'\n"
-	
 	return error_msg
 
-
 ## Deteksi tipe CSV dari header string dengan strict validation
-static func _detect_from_header(header: String) -> CSVType:
+static func _detect_from_header(header: String, suppress_warning: bool = false) -> CSVType:
 	header = header.to_lower()
 	
 	# Check RECIPE type (harus ada foodid dan base ingredients)
@@ -129,23 +112,34 @@ static func _detect_from_header(header: String) -> CSVType:
 		if _matches_pattern(header, pattern):
 			return CSVType.RECIPE
 	
+	# Check BEVERAGE type
+	for pattern in TYPE_CONFIGS[CSVType.BEVERAGE]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.BEVERAGE
+	
+	# Check DECORATION type
+	for pattern in TYPE_CONFIGS[CSVType.DECORATION]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.DECORATION
+	
 	# Check ITEM type (paling spesifik - harus ada IngredientId dan Ingredient Name)
 	for pattern in TYPE_CONFIGS[CSVType.ITEM]["header_patterns"]:
 		if _matches_pattern(header, pattern):
 			return CSVType.ITEM
-	
+
 	# Check INGREDIENT type
 	for pattern in TYPE_CONFIGS[CSVType.INGREDIENT]["header_patterns"]:
 		if _matches_pattern(header, pattern):
 			return CSVType.INGREDIENT
-	
+
 	# Check DIALOG type dengan strict validation (wajib ada lineid dan text)
 	var dialog_required = TYPE_CONFIGS[CSVType.DIALOG]["required_headers"]
 	if _matches_pattern(header, dialog_required):
 		return CSVType.DIALOG
 	
 	# Tidak cocok dengan format manapun
-	push_warning("CSVConfig: Format CSV tidak dikenali. Header: " + header)
+	if not suppress_warning:
+		push_warning("CSVConfig: Format CSV tidak dikenali. Header: " + header)
 	return CSVType.UNKNOWN
 
 ## Cek apakah header string memenuhi pattern
@@ -167,6 +161,10 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_dialog()
 		CSVType.RECIPE:
 			parser.configure_for_recipe()
+		CSVType.BEVERAGE:
+			parser.configure_for_beverage()
+		CSVType.DECORATION:
+			parser.configure_for_decoration()
 		CSVType.UNKNOWN:
 			push_warning("CSVConfig: Tidak dapat mengkonfigurasi parser untuk tipe UNKNOWN")
 
@@ -182,6 +180,10 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_dialog()
 		CSVType.RECIPE:
 			generator.configure_for_recipe()
+		CSVType.BEVERAGE:
+			generator.configure_for_beverage()
+		CSVType.DECORATION:
+			generator.configure_for_decoration()
 		CSVType.UNKNOWN:
 			push_warning("CSVConfig: Tidak dapat mengkonfigurasi generator untuk tipe UNKNOWN")
 
