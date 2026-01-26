@@ -119,66 +119,64 @@ func get_fatal_error_messages() -> Array[String]:
 			messages.append(err.message)
 	return messages
 
-
-
 ## Preset Konfigurasi untuk CSV file diambil dari DataSchemas
 func configure_for_dialog() -> CSVParser:
 	var config = DataSchemas.get_dialog_config()
 	schema = config.schema
-	group_header = config.group_header
+	group_header = config.group_header.to_lower()
 	header_row = config.header_row
 	start_row = config.start_row
-	id_header = config.id_header
-	metadata_header = config.metadata_header
-	metadata_value_header = config.metadata_value_header
+	id_header = config.id_header.to_lower()
+	metadata_header = config.metadata_header.to_lower()
+	metadata_value_header = config.metadata_value_header.to_lower()
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
 func configure_for_ingredient() -> CSVParser:
 	var config = DataSchemas.get_ingredient_config()
 	schema = config.schema
-	group_header = config.group_header
+	group_header = config.group_header.to_lower()
 	header_row = config.header_row
 	start_row = config.start_row
-	id_header = config.id_header
-	metadata_header = config.metadata_header
-	metadata_value_header = config.metadata_value_header
+	id_header = config.id_header.to_lower()
+	metadata_header = config.metadata_header.to_lower()
+	metadata_value_header = config.metadata_value_header.to_lower()
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
 func configure_for_recipe() -> CSVParser:
 	var config = DataSchemas.get_recipe_config()
 	schema = config.schema
-	group_header = config.group_header
+	group_header = config.group_header.to_lower()
 	header_row = config.header_row
 	start_row = config.start_row
-	id_header = config.id_header
-	metadata_header = config.metadata_header
-	metadata_value_header = config.metadata_value_header
+	id_header = config.id_header.to_lower()
+	metadata_header = config.metadata_header.to_lower()
+	metadata_value_header = config.metadata_value_header.to_lower()
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
 func configure_for_beverage() -> CSVParser:
 	var config = DataSchemas.get_beverage_config()
 	schema = config.schema
-	group_header = config.group_header
+	group_header = config.group_header.to_lower()
 	header_row = config.header_row
 	start_row = config.start_row
-	id_header = config.id_header
-	metadata_header = config.metadata_header
-	metadata_value_header = config.metadata_value_header
+	id_header = config.id_header.to_lower()
+	metadata_header = config.metadata_header.to_lower()
+	metadata_value_header = config.metadata_value_header.to_lower()
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
 func configure_for_decoration() -> CSVParser:
 	var config = DataSchemas.get_decoration_config()
 	schema = config.schema
-	group_header = config.group_header
+	group_header = config.group_header.to_lower()
 	header_row = config.header_row
 	start_row = config.start_row
-	id_header = config.id_header
-	metadata_header = config.metadata_header
-	metadata_value_header = config.metadata_value_header
+	id_header = config.id_header.to_lower()
+	metadata_header = config.metadata_header.to_lower()
+	metadata_value_header = config.metadata_value_header.to_lower()
 	supported_metadata_types = config.supported_metadata_types
 	return self
 
@@ -319,6 +317,10 @@ func _clear_data() -> void:
 	warning_row_ids.clear()
 	warning_details.clear()
 	fatal_warnings.clear()
+
+## Public wrapper untuk parsing satu baris CSV menjadi array
+func parse_csv_line(line: String) -> Array:
+	return _parse_csv_line(line)
 
 ## Mengubah satu baris CSV menjadi array
 func _parse_csv_line(line: String) -> Array:
@@ -478,7 +480,8 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 		if str(id_val).strip_edges().is_empty():
 			return {}
 		# Skip jika ID adalah 0 (default dari konversi gagal) dan raw value bukan "0"
-		if id_val == 0:
+		# Hanya berlaku untuk tipe int, skip untuk tipe string
+		if id_val is int and id_val == 0:
 			# Cek raw value dari kolom ID
 			var id_col = -1
 			var id_config = schema.get(id_field, {})

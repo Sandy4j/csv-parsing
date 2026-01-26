@@ -170,7 +170,6 @@ static func get_recipe_config() -> Dictionary:
 		"skip_non_numeric_id": true
 	}	
 
-
 ## Schema untuk Beverage Data CSV
 static func get_beverage_schema() -> Dictionary:
 	return {
@@ -191,7 +190,6 @@ static func get_beverage_schema() -> Dictionary:
 		"sellPrice": {"header_name": "sell price", "type": "int_dash", "default": 0}
 	}
 
-
 ## Key order untuk Beverage JSON output
 static func get_beverage_key_order() -> Array:
 	return [
@@ -199,7 +197,6 @@ static func get_beverage_key_order() -> Array:
 		"shop", "keyword", "trait", "iconBig", "iconHovered", "iconFocused",
 		"iconFull", "iconDefault", "buyPrice", "sellPrice"
 	]
-
 
 ## Beverage parser configuration
 static func get_beverage_config() -> Dictionary:
@@ -249,4 +246,25 @@ static func get_decoration_config() -> Dictionary:
 		"supported_metadata_types": [],
 		"key_order": get_decoration_key_order(),
 		"output_wrapper": "Decorations",
+	}
+
+## Patron System Configuration
+static func get_patron_files_config() -> Dictionary:
+	return {
+		"PATRONS": {
+			"filename": "Patrons.csv",
+			"char_header": "character_name"
+		},
+		"STORY": {
+			"filename": "PatronStory.csv",
+			"char_header": "character_name"
+		},
+		"ORDERS": {
+			"filename": "Orders.csv",
+			"char_header": "set_order_name"
+		},
+		"IDLETALK": {
+			"filename": "IdleTalkReqs.csv",
+			"char_header": "character_name"
+		}
 	}

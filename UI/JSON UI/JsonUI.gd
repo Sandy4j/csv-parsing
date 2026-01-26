@@ -405,5 +405,3 @@ func _on_container_cancel_pressed() -> void:
 	_container_item = null
 	_container_path = []
 	container_popup.hide()
-
-

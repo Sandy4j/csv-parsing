@@ -24,3 +24,10 @@ GlobalData="*res://Data/GlobalData.gd"
 window/size/viewport_width=1280
 window/size/viewport_height=720
 window/stretch/mode="viewport"
+
+[importer_defaults]
+
+csv_translation={
+"compress": true,
+"delimiter": 0
+}

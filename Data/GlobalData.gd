@@ -10,6 +10,9 @@ var pending_warning_details: Array[Dictionary] = []
 var pending_json_text: String = ""
 var pending_prevent_auto_save: bool = false
 
+# State untuk Patron selection
+var selected_patron: String = ""
+
 ## Set pending data untuk JsonUI (legacy - hanya ID)
 func set_pending_data(json_path: String, warning_ids: Array[String], json_text: String = "", prevent_auto_save: bool = false) -> void:
 	pending_json_path = json_path

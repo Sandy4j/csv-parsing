@@ -9,6 +9,7 @@ enum CSVType {
 	RECIPE,
 	BEVERAGE,
 	DECORATION,
+	PATRON,
 	UNKNOWN
 }
 
@@ -17,8 +18,8 @@ const TYPE_CONFIGS: Dictionary = {
 		"name": "dialog",
 		"group_label": "chapters",
 		"root_name": "Default",
-		"header_patterns": [["lineid", "text"]],  # Wajib ada lineid dan text
-		"required_headers": ["lineid", "text"]    # Header yang wajib ada
+		"header_patterns": [["lineid", "text"]],
+		"required_headers": ["lineid", "text"]
 	},
 	CSVType.INGREDIENT: {
 		"name": "ingredient",
@@ -47,6 +48,19 @@ const TYPE_CONFIGS: Dictionary = {
 		"root_name": "Decorations",
 		"header_patterns": [["no.", "type", "filename", "name", "price", "description"]],
 		"required_headers": ["no.", "name", "filename"]
+	},
+	CSVType.PATRON: {
+		"name": "patron",
+		"group_label": "characters",
+		"root_name": "",
+		"header_patterns": [
+			["patronid", "character_name"],
+			["character_name", "patron_wealth"],
+			["storyreqs", "character_name", "chapter_name", "storyid"],
+			["set_order_name", "entry_1_id", "entry_2_id"],
+			["idletalkreqs", "character_name", "chapter_name"]
+		],
+		"required_headers": ["character_name"]
 	},
 	CSVType.UNKNOWN: {
 		"name": "unknown",
@@ -99,6 +113,11 @@ static func get_detection_error(csv_path: String) -> String:
 static func _detect_from_header(header: String, suppress_warning: bool = false) -> CSVType:
 	header = header.to_lower()
 	
+	# Check PATRON type first (Patrons.csv, PatronStory.csv, Orders.csv, IdleTalkReqs.csv)
+	for pattern in TYPE_CONFIGS[CSVType.PATRON]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.PATRON
+	
 	# Check RECIPE type (harus ada foodid dan base ingredients)
 	for pattern in TYPE_CONFIGS[CSVType.RECIPE]["header_patterns"]:
 		if _matches_pattern(header, pattern):
@@ -119,7 +138,7 @@ static func _detect_from_header(header: String, suppress_warning: bool = false) 
 		if _matches_pattern(header, pattern):
 			return CSVType.INGREDIENT
 
-	# Check DIALOG type dengan strict validation (wajib ada lineid dan text)
+	# Check DIALOG type dengan strict validation (harus ada lineid dan text)
 	var dialog_required = TYPE_CONFIGS[CSVType.DIALOG]["required_headers"]
 	if _matches_pattern(header, dialog_required):
 		return CSVType.DIALOG
@@ -150,6 +169,8 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_beverage()
 		CSVType.DECORATION:
 			parser.configure_for_decoration()
+		CSVType.PATRON:
+			pass # Tipe patron menggunakan parser di PatronDataLoader
 		CSVType.UNKNOWN:
 			push_warning("CSVConfig: Tidak dapat mengkonfigurasi parser untuk tipe UNKNOWN")
 
@@ -167,6 +188,8 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_beverage()
 		CSVType.DECORATION:
 			generator.configure_for_decoration()
+		CSVType.PATRON:
+			pass # Tipe patron menggunakan generator di PatronDataLoader
 		CSVType.UNKNOWN:
 			push_warning("CSVConfig: Tidak dapat mengkonfigurasi generator untuk tipe UNKNOWN")
 

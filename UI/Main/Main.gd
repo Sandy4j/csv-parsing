@@ -20,25 +20,33 @@ extends Control
 @onready var deselect_all_button: Button = %DeselectAllButton
 @onready var chapter_filter_container: VBoxContainer = %ChapterFilterContainer
 @onready var open_json_viewer_button: Button = %OpenJsonViewerButton
+@onready var patron_selection_container: VBoxContainer = %PatronSelectionContainer
+@onready var patron_checkbox_container: VBoxContainer = %PatronCheckboxContainer
 
 # Preload scripts
 const CSVParserScript = preload("res://Data/Parser.gd")
 const JSONGeneratorScript = preload("res://Data/Json_generate.gd")
+const MergeSystemScript = preload("res://UI/MergeSystem.gd")
+const PatronsManagerScript = preload("res://Data/PatronManager/PatronsManager.gd")
+const PatronDataLoaderScript = preload("res://Data/PatronManager/PatronDataLoader.gd")
 
 # Core components
 var parser: Node
 var json_generator: Node
+var patron_loader: Node
 var Group_Manager: GroupManager
-var current_csv_type: CSVConfig.CSVType = CSVConfig.CSVType.DIALOG
+var Patron_Manager: RefCounted
+var current_csv_type: CSVConfig.CSVType = CSVConfig.CSVType.UNKNOWN
 
-# Error dialog
 var error_dialog: AcceptDialog
 var error_text_edit: TextEdit
+var merge_confirmation_dialog: ConfirmationDialog
 
 
 func _ready() -> void:
 	_init_components()
 	_init_error_dialog()
+	_init_merge_confirmation_dialog()
 	_connect_signals()
 	_update_status("Ready - Select CSV file and output location")
 	chapter_filter_container.visible = false
@@ -46,10 +54,30 @@ func _ready() -> void:
 func _init_components() -> void:
 	parser = CSVParserScript.new()
 	json_generator = JSONGeneratorScript.new()
+	patron_loader = PatronDataLoaderScript.new()
 	add_child(parser)
 	add_child(json_generator)
+	add_child(patron_loader)
 	Group_Manager = GroupManager.new(chapter_checkbox_container)
 	Group_Manager.selection_changed.connect(_on_filter_selection_changed)
+	Patron_Manager = PatronsManagerScript.new(patron_checkbox_container)
+	Patron_Manager.patron_selected.connect(_on_patron_selected_callback)
+
+func _on_patron_selected_callback(patron_name: String) -> void:
+	_update_status("Patron terpilih: " + patron_name)
+	print("[Main] Selected patron saved to GlobalData: ", GlobalData.selected_patron)
+	
+	# Load all related data for the selected patron
+	var csv_path = file_path_edit.text.strip_edges()
+	if not csv_path.is_empty():
+		var dir = csv_path.get_base_dir()
+		var result = patron_loader.load_patron_data(dir, patron_name)
+		if result.get("success", false):
+			print("[Main] Mapped data for ", patron_name, ": ", result.get("data", {}).keys())
+		else:
+			var errors: Array = result.get("errors", [])
+			if errors.size() > 0:
+				_show_error_report(errors)
 
 func _init_error_dialog() -> void:
 	error_dialog = AcceptDialog.new()
@@ -65,6 +93,206 @@ func _init_error_dialog() -> void:
 	error_dialog.add_child(error_text_edit)
 	add_child(error_dialog)
 
+func _init_merge_confirmation_dialog() -> void:
+	merge_confirmation_dialog = ConfirmationDialog.new()
+	merge_confirmation_dialog.title = "Konfirmasi Batch Parsing"
+	merge_confirmation_dialog.dialog_text = "Apakah file CSV dengan type INGREDIENT, RECIPE, BEVERAGE, atau DECORATION sudah dalam 1 folder?"
+	merge_confirmation_dialog.ok_button_text = "Ya"
+	merge_confirmation_dialog.cancel_button_text = "Tidak"
+	merge_confirmation_dialog.confirmed.connect(_on_merge_confirmed)
+	merge_confirmation_dialog.canceled.connect(_on_merge_canceled)
+	add_child(merge_confirmation_dialog)
+
+func _on_merge_confirmed() -> void:
+	var csv_path = file_path_edit.text.strip_edges()
+	var output_path = output_path_edit.text.strip_edges()
+	_process_batch_merge(csv_path, output_path)
+
+func _on_merge_canceled() -> void:
+	_update_status("Parsing dibatalkan oleh pengguna.")
+
+func _should_confirm_merge(type: CSVConfig.CSVType) -> bool:
+	match type:
+		CSVConfig.CSVType.INGREDIENT, \
+		CSVConfig.CSVType.RECIPE, \
+		CSVConfig.CSVType.BEVERAGE, \
+		CSVConfig.CSVType.DECORATION:
+			return true
+	return false
+
+func _process_single_csv(csv_path: String, output_path: String) -> void:
+	CSVConfig.configure_all(parser, json_generator, current_csv_type)
+	_update_status("Memproses CSV...")
+	
+	# Parse dalam mode FULL_VALIDATION
+	parser.set_parse_mode(CSVParser.ParseMode.FULL_VALIDATION)
+	if not parser.parse_csv_from_path(csv_path):
+		_update_status("Error: Gagal memproses file CSV")
+		if not parser.parsing_errors.is_empty():
+			_show_error_report(parser.get_error_messages())
+		return
+	
+	# Get data
+	var data_to_export = _get_export_data()
+	if data_to_export.is_empty():
+		_update_status("Error: Tidak ada data untuk diekspor.")
+		return
+	
+	# Generate JSON
+	_update_status("Membuat JSON...")
+	_apply_root_name()
+	
+	var fatal_array_issue: bool = parser.has_fatal_warnings()
+	var json_string: String = ""
+	if fatal_array_issue:
+		json_string = json_generator.generate_json_string(data_to_export)
+	else:
+		json_string = json_generator.generate_json_to_path(data_to_export, output_path)
+	
+	if json_string.is_empty():
+		_update_status("Error: Gagal membuat JSON")
+		return
+	
+	var group_label = CSVConfig.get_group_label(current_csv_type)
+	var status_msg = "Berhasil! Mengekspor %d %s ke: %s" % [data_to_export.size(), group_label, output_path]
+	
+	# Tampilkan warning jika ada dan hubungkan ke scene change
+	if parser.has_conversion_errors():
+		status_msg = "Selesai dengan peringatan! %d %s diproses" % [data_to_export.size(), group_label]
+		if fatal_array_issue:
+			status_msg = "Peringatan fatal: array wajib 5 elemen. File belum disimpan. Buka editor untuk perbaiki lalu Save." 
+		_update_status(status_msg)
+		_show_error_report_with_navigation(parser.get_error_messages(), output_path, parser.get_warning_row_ids(), parser.get_warning_details(), json_string if fatal_array_issue else "", fatal_array_issue)
+	else:
+		_update_status(status_msg)
+
+func _process_batch_merge(base_csv_path: String, final_output_path: String) -> void:
+	var folder_path = base_csv_path.get_base_dir()
+	var dir = DirAccess.open(folder_path)
+	if dir == null:
+		_update_status("Error: Gagal membuka folder " + folder_path)
+		return
+	
+	dir.list_dir_begin()
+	var csv_files: Array[String] = []
+	var file_name = dir.get_next()
+	while file_name != "":
+		if not dir.current_is_dir() and file_name.ends_with(".csv"):
+			csv_files.append(folder_path.path_join(file_name))
+		file_name = dir.get_next()
+	dir.list_dir_end()
+	
+	if csv_files.is_empty():
+		_update_status("Error: Tidak ada file CSV ditemukan di folder.")
+		return
+	
+	_update_status("Memproses %d file CSV..." % csv_files.size())
+	
+	var temp_json_paths: Array[String] = []
+	var all_errors: Array[String] = []
+	var skipped_files: Array[String] = []
+	var processed_types: Array[String] = []  # Untuk reporting
+	var seen_types: Array[CSVConfig.CSVType] = [] # ✅ Untuk mendeteksi duplikasi tipe
+	
+	# ✅ Daftar tipe yang BOLEH di-merge
+	var mergeable_types = [
+		CSVConfig.CSVType.INGREDIENT,
+		CSVConfig.CSVType.RECIPE,
+		CSVConfig.CSVType.BEVERAGE,
+		CSVConfig.CSVType.DECORATION
+	]
+	
+	# Create temp directory
+	var temp_dir = "user://temp_parsing/"
+	if not DirAccess.dir_exists_absolute(temp_dir):
+		DirAccess.make_dir_recursive_absolute(temp_dir)
+	
+	for csv_file in csv_files:
+		var file_type = CSVConfig.detect_type(csv_file)
+		
+		# ✅ Skip jika UNKNOWN
+		if file_type == CSVConfig.CSVType.UNKNOWN:
+			skipped_files.append(csv_file.get_file() + " (tipe tidak dikenali)")
+			continue
+		
+		# ✅ Skip jika BUKAN salah satu dari 4 tipe mergeable
+		if file_type not in mergeable_types:
+			var type_name = CSVConfig.get_type_name(file_type)
+			skipped_files.append(csv_file.get_file() + " (tipe %s tidak dapat di-merge)" % type_name)
+			continue
+		
+		# ✅ Exception Handling: Hiraukan jika duplikasi tipe ditemukan
+		if file_type in seen_types:
+			var type_name = CSVConfig.get_type_name(file_type)
+			skipped_files.append(csv_file.get_file() + " (duplikasi tipe %s diabaikan)" % type_name)
+			continue
+		
+		# ✅ Tandai tipe ini sudah diproses
+		seen_types.append(file_type)
+		var type_name = CSVConfig.get_type_name(file_type)
+		if type_name not in processed_types:
+			processed_types.append(type_name)
+		
+		CSVConfig.configure_all(parser, json_generator, file_type)
+		parser.set_parse_mode(CSVParser.ParseMode.FULL_VALIDATION)
+		
+		if parser.parse_csv_from_path(csv_file):
+			var data = parser.get_data()
+			if not data.is_empty():
+				var temp_json_name = csv_file.get_file().replace(".csv", ".json")
+				var temp_path = temp_dir.path_join(temp_json_name)
+				
+				var original_no_root = json_generator.no_root_wrapper
+				
+				json_generator.set_no_root_wrapper(true)
+				json_generator.generate_json_to_path(data, temp_path)
+				temp_json_paths.append(temp_path)
+				
+				json_generator.set_no_root_wrapper(original_no_root)
+			
+			if parser.has_conversion_errors():
+				all_errors.append_array(parser.get_error_messages())
+		else:
+			all_errors.append("Gagal parse: " + csv_file.get_file())
+	
+	# ✅ Informasi file yang di-skip
+	if not skipped_files.is_empty():
+		var skip_msg = "File yang di-skip (%d):\n%s" % [skipped_files.size(), "\n".join(skipped_files)]
+		all_errors.insert(0, skip_msg)
+	
+	if temp_json_paths.is_empty():
+		_update_status("Error: Tidak ada file CSV yang valid untuk di-merge (hanya INGREDIENT, RECIPE, BEVERAGE, DECORATION).")
+		if not all_errors.is_empty():
+			_show_error_report(all_errors)
+		if DirAccess.dir_exists_absolute(temp_dir):
+			DirAccess.remove_absolute(temp_dir)
+		return
+	
+	# Merge files
+	_update_status("Menggabungkan %d hasil parsing..." % temp_json_paths.size())
+	var merger = MergeSystemScript.new()
+	add_child(merger)
+	var merge_result = merger.merge_json_files(temp_json_paths, final_output_path)
+	
+	if merge_result.success:
+		# ✅ Tampilkan tipe apa saja yang berhasil di-merge
+		var types_merged = ", ".join(processed_types)
+		_update_status("Berhasil menggabungkan %d file [%s] ke: %s" % [temp_json_paths.size(), types_merged, final_output_path])
+		if not all_errors.is_empty():
+			_show_error_report(all_errors)
+	else:
+		_update_status("Error saat menggabungkan: " + ", ".join(merge_result.errors))
+		_show_error_report(merge_result.errors + all_errors)
+	
+	# Cleanup temp files
+	for path in temp_json_paths:
+		DirAccess.remove_absolute(path)
+	
+	var remove_dir_err = DirAccess.remove_absolute(temp_dir)
+	if remove_dir_err != OK:
+		push_warning("Gagal menghapus folder temp: " + temp_dir)
+		
+	merger.queue_free()
 
 func _connect_signals() -> void:
 	browse_button.pressed.connect(_on_browse_pressed)
@@ -82,9 +310,101 @@ func _on_browse_pressed() -> void:
 func _on_output_browse_pressed() -> void:
 	output_file_dialog.popup_centered()
 func _on_file_selected(path: String) -> void:
-	file_path_edit.text = path
+	file_dialog.hide()
+	
+	var filename = path.get_file().to_lower()
+	var patron_config = DataSchemas.get_patron_files_config()
+	var patrons_related_files = []
+	for key in patron_config:
+		patrons_related_files.append(patron_config[key]["filename"].to_lower())
+	
 	_reset_chapter_filter()
-	_update_status("CSV file selected. Click 'Load Chapters' to see available groups.")
+	
+	if filename in patrons_related_files:
+		var dir = path.get_base_dir()
+		var result = patron_loader.validate_files_only(dir)
+		
+		if result.get("success", false):
+			file_path_edit.text = path
+			_update_status("CSV file selected. Patron list loaded.")
+			_load_patrons(dir.path_join(patron_config["PATRONS"]["filename"]))
+		else:
+			file_path_edit.text = ""
+			var errors: Array = result.get("errors", [])
+			if errors.size() > 0:
+				_update_status("Error: " + str(errors[0]))
+				_show_error_report(errors)
+			else:
+				_update_status("Error: File validation failed")
+			patron_selection_container.visible = false
+	else:
+		file_path_edit.text = path
+		_update_status("CSV file selected. Click 'Load Chapters' to see available groups.")
+		patron_selection_container.visible = false
+
+func _load_patrons(path: String) -> void:
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		var filename = path.get_file()
+		_update_status("Error: Gagal membuka file " + filename)
+		return
+	
+	var patron_config = DataSchemas.get_patron_files_config()
+	var target_header: String = patron_config["PATRONS"]["char_header"]
+	
+	var patron_names = []
+	var headers = []
+	var name_idx = -1
+	var line_count = 0
+	
+	while not file.eof_reached():
+		var line = file.get_csv_line()
+		if line.size() == 0 or (line.size() == 1 and line[0].strip_edges().is_empty()):
+			continue
+		
+		if line_count == 0:
+			headers = line
+			for i in range(headers.size()):
+				if headers[i].strip_edges().to_lower() == target_header.to_lower():
+					name_idx = i
+					break
+			line_count += 1
+			continue
+		
+		if name_idx != -1:
+			# Handle dimana format baris aneh (satu baris dibungkus kutip)
+			if line.size() == 1 and line[0].contains(","):
+				var raw_line = line[0]
+				# Gunakan parser's CSV parsing untuk handle quoted fields
+				var parsed_fields = parser.parse_csv_line(raw_line)
+				if parsed_fields.size() > name_idx:
+					var character_name = parsed_fields[name_idx].strip_edges()
+					if not character_name.is_empty() and not "NPC" in character_name:
+						patron_names.append(character_name)
+			elif line.size() > name_idx:
+				var character_name = line[name_idx].strip_edges()
+				if not character_name.is_empty() and not "NPC" in character_name:
+					patron_names.append(character_name)
+		
+		line_count += 1
+	file.close()
+	
+	if name_idx == -1:
+		_update_status("Error: Kolom '%s' tidak ditemukan di %s" % [target_header, patron_config["PATRONS"]["filename"]])
+		patron_selection_container.visible = false
+		return
+	
+	if patron_names.is_empty():
+		_update_status("Tidak ada karakter patron yang ditemukan.")
+		patron_selection_container.visible = false
+	else:
+		_update_status("Memuat %d karakter patron." % patron_names.size())
+		patron_selection_container.visible = true
+		Patron_Manager.populate(patron_names)
+
+func _on_patron_selected(patron_name: String) -> void:
+	# Fungsi ini dipanggil dari sinyal Patron_Manager.patron_selected
+	pass
 func _on_output_file_selected(path: String) -> void:
 	if not path.ends_with(".json"):
 		path += ".json"
@@ -124,8 +444,6 @@ func _on_load_chapters_pressed() -> void:
 		if not structural_errors.is_empty():
 			_show_error_report(structural_errors)
 		return
-	
-	# Tidak menampilkan popup warning untuk mode Load Chapters
 	
 	# Dapatkan groups yang tersedia
 	var groups = parser.get_available_groups()
@@ -175,50 +493,16 @@ func _on_generate_pressed() -> void:
 		_show_error_report([detailed_error])
 		return
 	
-	CSVConfig.configure_all(parser, json_generator, current_csv_type)
-	_update_status("Memproses CSV...")
-	
-	# Parse dalam mode FULL_VALIDATION
-	parser.set_parse_mode(CSVParser.ParseMode.FULL_VALIDATION)
-	if not parser.parse_csv_from_path(csv_path):
-		_update_status("Error: Gagal memproses file CSV")
-		if not parser.parsing_errors.is_empty():
-			_show_error_report(parser.get_error_messages())
+	# Handle PATRON type secara khusus
+	if current_csv_type == CSVConfig.CSVType.PATRON:
+		_process_patron_csv(csv_path, output_path)
 		return
 	
-	# Get data
-	var data_to_export = _get_export_data()
-	if data_to_export.is_empty():
-		_update_status("Error: Tidak ada data untuk diekspor.")
-		return
-	
-	# Generate JSON
-	_update_status("Membuat JSON...")
-	_apply_root_name()
-	
-	var fatal_array_issue: bool = parser.has_fatal_warnings()
-	var json_string: String = ""
-	if fatal_array_issue:
-		json_string = json_generator.generate_json_string(data_to_export)
+	# Cek apakah tipe membutuhkan konfirmasi merge
+	if _should_confirm_merge(current_csv_type):
+		merge_confirmation_dialog.popup_centered()
 	else:
-		json_string = json_generator.generate_json_to_path(data_to_export, output_path)
-	
-	if json_string.is_empty():
-		_update_status("Error: Gagal membuat JSON")
-		return
-	
-	var group_label = CSVConfig.get_group_label(current_csv_type)
-	var status_msg = "Berhasil! Mengekspor %d %s ke: %s" % [data_to_export.size(), group_label, output_path]
-	
-	# Tampilkan warning jika ada dan hubungkan ke scene change
-	if parser.has_conversion_errors():
-		status_msg = "Selesai dengan peringatan! %d %s diproses" % [data_to_export.size(), group_label]
-		if fatal_array_issue:
-			status_msg = "Peringatan fatal: array wajib 5 elemen. File belum disimpan. Buka editor untuk perbaiki lalu Save." 
-		_update_status(status_msg)
-		_show_error_report_with_navigation(parser.get_error_messages(), output_path, parser.get_warning_row_ids(), parser.get_warning_details(), json_string if fatal_array_issue else "", fatal_array_issue)
-	else:
-		_update_status(status_msg)
+		_process_single_csv(csv_path, output_path)
 
 ## Validasi path input
 func _validate_paths(csv_path: String, output_path: String) -> bool:
@@ -231,6 +515,44 @@ func _validate_paths(csv_path: String, output_path: String) -> bool:
 		return false
 	
 	return true
+
+
+## Process PATRON type CSV - menggunakan PatronDataLoader
+func _process_patron_csv(csv_path: String, output_path: String) -> void:
+	# Cek apakah ada patron yang dipilih
+	var selected_patron: String = GlobalData.selected_patron
+	if selected_patron.is_empty():
+		_update_status("Error: Pilih karakter patron terlebih dahulu")
+		_show_error_report(["Tidak ada karakter patron yang dipilih. Pilih karakter dari daftar patron terlebih dahulu."])
+		return
+	
+	var dir: String = csv_path.get_base_dir()
+	var output_dir: String = output_path.get_base_dir()
+	
+	_update_status("Memproses data patron: " + selected_patron + "...")
+	
+	# Gunakan process_character untuk load, generate, dan save sekaligus
+	var result: Dictionary = patron_loader.process_character(dir, output_dir, selected_patron)
+	
+	if result.get("success", false):
+		var file_path: String = result.get("file_path", "")
+		var errors: Array = result.get("errors", [])
+		
+		if errors.size() > 0:
+			# Ada warning tapi sukses
+			_update_status("JSON berhasil dibuat dengan %d warning: %s" % [errors.size(), file_path])
+			_show_error_report(errors)
+		else:
+			_update_status("JSON berhasil dibuat: " + file_path)
+		
+		print("[Main] Patron JSON saved to: ", file_path)
+	else:
+		var errors: Array = result.get("errors", [])
+		if errors.size() > 0:
+			_update_status("Error: " + str(errors[0]))
+			_show_error_report(errors)
+		else:
+			_update_status("Error: Gagal memproses data patron")
 
 ## Dapatkan data yang akan diexport dari CSV
 func _get_export_data() -> Dictionary:
@@ -251,7 +573,6 @@ func _apply_root_name() -> void:
 	else:
 		json_generator.set_no_root_wrapper(false)
 		json_generator.set_root_name(root_name)
-
 
 
 func _update_status(message: String) -> void:
@@ -286,7 +607,7 @@ func _show_error_report_with_navigation(errors: Array, json_path: String, warnin
 		error_text += "Catatan: File belum disimpan otomatis karena warning fatal array (wajib 5 elemen)."
 	error_text_edit.text = error_text
 	
-	# Simpan data ke GlobalData autoload (akan persist antar scene)
+	# Simpan data ke GlobalData autoload
 	# Gunakan warning_details jika tersedia, jika tidak gunakan warning_ids saja
 	if warning_details.size() > 0:
 		GlobalData.set_pending_data_with_details(json_path, warning_details, json_text, prevent_auto_save)
@@ -316,3 +637,4 @@ func _on_error_dialog_confirmed() -> void:
 
 func _on_open_json_viewer_pressed() -> void:
 	get_tree().change_scene_to_file("res://UI/JSON UI/Json UI.tscn")
+
