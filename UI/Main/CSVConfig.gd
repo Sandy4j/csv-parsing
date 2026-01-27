@@ -56,9 +56,11 @@ const TYPE_CONFIGS: Dictionary = {
 		"header_patterns": [
 			["patronid", "character_name"],
 			["character_name", "patron_wealth"],
+			["character_name", "character_name_stranger"],
 			["storyreqs", "character_name", "chapter_name", "storyid"],
 			["set_order_name", "entry_1_id", "entry_2_id"],
-			["idletalkreqs", "character_name", "chapter_name"]
+			["idletalkreqs", "character_name", "chapter_name"],
+			["idletalkreqs", "character_name", "chapter_name", "storyid"]
 		],
 		"required_headers": ["character_name"]
 	},

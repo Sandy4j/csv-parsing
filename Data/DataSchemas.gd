@@ -247,24 +247,31 @@ static func get_decoration_config() -> Dictionary:
 		"key_order": get_decoration_key_order(),
 		"output_wrapper": "Decorations",
 	}
+	
+## Schema untuk NPC Properties CSV	
+	
 
-## Patron System Configuration
+## Patron System Configuration - Detection by header patterns
 static func get_patron_files_config() -> Dictionary:
 	return {
 		"PATRONS": {
 			"filename": "Patrons.csv",
-			"char_header": "character_name"
+			"char_header": "character_name",
+			"required_headers": ["patronid", "character_name", "patron_wealth"]
 		},
 		"STORY": {
 			"filename": "PatronStory.csv",
-			"char_header": "character_name"
+			"char_header": "character_name",
+			"required_headers": ["storyreqs", "character_name", "chapter_name", "storyid"]
 		},
 		"ORDERS": {
 			"filename": "Orders.csv",
-			"char_header": "set_order_name"
+			"char_header": "set_order_name",
+			"required_headers": ["set_order_name", "entry_1_id", "entry_2_id"]
 		},
 		"IDLETALK": {
 			"filename": "IdleTalkReqs.csv",
-			"char_header": "character_name"
+			"char_header": "character_name",
+			"required_headers": ["idletalkreqs", "character_name", "chapter_name"]
 		}
 	}

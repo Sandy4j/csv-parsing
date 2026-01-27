@@ -77,7 +77,8 @@ func _on_patron_selected_callback(patron_name: String) -> void:
 		else:
 			var errors: Array = result.get("errors", [])
 			if errors.size() > 0:
-				_show_error_report(errors)
+				# Use call_deferred to prevent exclusive window conflict
+				call_deferred("_show_error_report", errors)
 
 func _init_error_dialog() -> void:
 	error_dialog = AcceptDialog.new()
@@ -312,39 +313,57 @@ func _on_output_browse_pressed() -> void:
 func _on_file_selected(path: String) -> void:
 	file_dialog.hide()
 	
-	var filename = path.get_file().to_lower()
-	var patron_config = DataSchemas.get_patron_files_config()
-	var patrons_related_files = []
-	for key in patron_config:
-		patrons_related_files.append(patron_config[key]["filename"].to_lower())
+	await get_tree().process_frame
 	
+	var dir = path.get_base_dir()
 	_reset_chapter_filter()
 	
-	if filename in patrons_related_files:
-		var dir = path.get_base_dir()
-		var result = patron_loader.validate_files_only(dir)
-		
-		if result.get("success", false):
-			file_path_edit.text = path
-			_update_status("CSV file selected. Patron list loaded.")
-			_load_patrons(dir.path_join(patron_config["PATRONS"]["filename"]))
+	# Coba validasi file patron
+	var result = patron_loader.validate_files_only(dir)
+	
+	if result.get("success", false):
+		# Semua file patron terdeteksi berdasarkan header
+		file_path_edit.text = path
+		_update_status("CSV file selected. Patron list loaded.")
+		var patrons_file_path: String = patron_loader.get_detected_file_path("PATRONS")
+		if not patrons_file_path.is_empty():
+			_load_patrons(patrons_file_path)
 		else:
-			file_path_edit.text = ""
-			var errors: Array = result.get("errors", [])
-			if errors.size() > 0:
-				_update_status("Error: " + str(errors[0]))
-				_show_error_report(errors)
-			else:
-				_update_status("Error: File validation failed")
+			_update_status("Error: File Patrons tidak terdeteksi")
 			patron_selection_container.visible = false
 	else:
-		file_path_edit.text = path
-		_update_status("CSV file selected. Click 'Load Chapters' to see available groups.")
-		patron_selection_container.visible = false
+		# Cek apakah ini file CSV non-patron atau error validasi
+		var errors: Array = result.get("errors", [])
+		if errors.size() > 0 and _is_patron_related_csv(path):
+			file_path_edit.text = ""
+			_update_status("Error: " + str(errors[0]))
+			call_deferred("_show_error_report", errors)
+			patron_selection_container.visible = false
+		else:
+			# Bukan file patron - lanjutkan sebagai file CSV biasa
+			file_path_edit.text = path
+			_update_status("CSV file selected. Click 'Load Chapters' to see available groups.")
+			patron_selection_container.visible = false
+
+## Cek apakah file CSV ini memiliki header yang terkait dengan patron system
+func _is_patron_related_csv(path: String) -> bool:
+	var rows = PatronParser.parse_patron_csv(path)
+	if rows.is_empty():
+		return false
+	
+	var headers: Array = rows[0]
+	var header_line: String = ",".join(headers).to_lower()
+	
+	# Cek apakah ada header yang terkait patron
+	var patron_keywords = ["patronid", "character_name", "storyreqs", "idletalkreqs", "set_order_name"]
+	for keyword in patron_keywords:
+		if header_line.find(keyword) >= 0:
+			return true
+	return false
 
 func _load_patrons(path: String) -> void:
-	var file = FileAccess.open(path, FileAccess.READ)
-	if file == null:
+	var rows = PatronParser.parse_patron_csv(path)
+	if rows.is_empty():
 		var filename = path.get_file()
 		_update_status("Error: Gagal membuka file " + filename)
 		return
@@ -353,46 +372,28 @@ func _load_patrons(path: String) -> void:
 	var target_header: String = patron_config["PATRONS"]["char_header"]
 	
 	var patron_names = []
-	var headers = []
+	var headers = rows[0]
 	var name_idx = -1
-	var line_count = 0
 	
-	while not file.eof_reached():
-		var line = file.get_csv_line()
-		if line.size() == 0 or (line.size() == 1 and line[0].strip_edges().is_empty()):
-			continue
-		
-		if line_count == 0:
-			headers = line
-			for i in range(headers.size()):
-				if headers[i].strip_edges().to_lower() == target_header.to_lower():
-					name_idx = i
-					break
-			line_count += 1
-			continue
-		
-		if name_idx != -1:
-			# Handle dimana format baris aneh (satu baris dibungkus kutip)
-			if line.size() == 1 and line[0].contains(","):
-				var raw_line = line[0]
-				# Gunakan parser's CSV parsing untuk handle quoted fields
-				var parsed_fields = parser.parse_csv_line(raw_line)
-				if parsed_fields.size() > name_idx:
-					var character_name = parsed_fields[name_idx].strip_edges()
-					if not character_name.is_empty() and not "NPC" in character_name:
-						patron_names.append(character_name)
-			elif line.size() > name_idx:
-				var character_name = line[name_idx].strip_edges()
-				if not character_name.is_empty() and not "NPC" in character_name:
-					patron_names.append(character_name)
-		
-		line_count += 1
-	file.close()
+	# Find character_name column index
+	for i in range(headers.size()):
+		if str(headers[i]).strip_edges().to_lower() == target_header.to_lower():
+			name_idx = i
+			break
 	
 	if name_idx == -1:
 		_update_status("Error: Kolom '%s' tidak ditemukan di %s" % [target_header, patron_config["PATRONS"]["filename"]])
 		patron_selection_container.visible = false
 		return
+	
+	# Extract patron names from data rows
+	for i in range(1, rows.size()):
+		var row = rows[i]
+		if row.size() > name_idx:
+			var character_name = str(row[name_idx]).strip_edges()
+			if not character_name.is_empty():
+				patron_names.append(character_name)
+			
 	
 	if patron_names.is_empty():
 		_update_status("Tidak ada karakter patron yang ditemukan.")
@@ -637,4 +638,3 @@ func _on_error_dialog_confirmed() -> void:
 
 func _on_open_json_viewer_pressed() -> void:
 	get_tree().change_scene_to_file("res://UI/JSON UI/Json UI.tscn")
-
