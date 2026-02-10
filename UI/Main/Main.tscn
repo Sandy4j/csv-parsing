@@ -32,41 +32,79 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 10
 
-[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer"]
+[node name="HeaderSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TitleLabel" type="Label" parent="Panel/VBoxContainer/HeaderSection"]
+layout_mode = 2
+size_flags_horizontal = 3
 text = "CSV to JSON Converter"
 horizontal_alignment = 1
 vertical_alignment = 1
 
+[node name="OpenJsonViewerButton" type="Button" parent="Panel/VBoxContainer/HeaderSection"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(150, 40)
+layout_mode = 2
+text = "Open JSON Viewer"
+
 [node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
-[node name="FileSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+[node name="FileTypeSection" type="VBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
-[node name="FilePathLabel" type="Label" parent="Panel/VBoxContainer/FileSection"]
-custom_minimum_size = Vector2(100, 0)
+[node name="FileTypeLabel" type="Label" parent="Panel/VBoxContainer/FileTypeSection"]
 layout_mode = 2
-text = "CSV File:"
+text = "Select File Type:"
 
-[node name="FilePathEdit" type="LineEdit" parent="Panel/VBoxContainer/FileSection"]
+[node name="FileTypeButtons" type="HBoxContainer" parent="Panel/VBoxContainer/FileTypeSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PatronsButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Patrons"
+
+[node name="DialogButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Dialog"
+
+[node name="ItemsButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "Items"
+
+[node name="NPCPropertiesButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+toggle_mode = true
+text = "NPC Properties"
+
+[node name="FilePathEdit" type="LineEdit" parent="Panel/VBoxContainer"]
+unique_name_in_owner = true
+visible = false
 layout_mode = 2
 size_flags_horizontal = 3
 placeholder_text = "Select CSV file..."
 editable = false
 
-[node name="BrowseButton" type="Button" parent="Panel/VBoxContainer/FileSection"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Browse"
-
-[node name="LoadChaptersButton" type="Button" parent="Panel/VBoxContainer/FileSection"]
-unique_name_in_owner = true
-layout_mode = 2
-text = "Load Chapters"
-
 [node name="OutputSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+visible = false
 layout_mode = 2
 
 [node name="OutputLabel" type="Label" parent="Panel/VBoxContainer/OutputSection"]
@@ -87,6 +125,7 @@ layout_mode = 2
 text = "Browse"
 
 [node name="RootNameSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
+visible = false
 layout_mode = 2
 
 [node name="RootNameLabel" type="Label" parent="Panel/VBoxContainer/RootNameSection"]
@@ -101,6 +140,7 @@ size_flags_horizontal = 3
 placeholder_text = "Type root name..."
 
 [node name="ButtonsContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 
@@ -111,15 +151,9 @@ layout_mode = 2
 size_flags_horizontal = 3
 text = "Generate JSON"
 
-[node name="OpenJsonViewerButton" type="Button" parent="Panel/VBoxContainer/ButtonsContainer"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Open JSON Viewer"
-
 [node name="ChapterFilterContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
 unique_name_in_owner = true
+visible = false
 layout_mode = 2
 theme_override_constants/separation = 5
 
@@ -142,6 +176,7 @@ text = "Deselect All"
 
 [node name="ChapterScrollContainer" type="ScrollContainer" parent="Panel/VBoxContainer/ChapterFilterContainer"]
 unique_name_in_owner = true
+visible = false
 custom_minimum_size = Vector2(0, 150)
 layout_mode = 2
 size_flags_vertical = 3

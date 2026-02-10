@@ -251,6 +251,99 @@ static func get_decoration_config() -> Dictionary:
 ## Schema untuk NPC Properties CSV	
 	
 
+## Schema untuk Colors.csv - Data warna
+static func get_npc_colors_schema() -> Dictionary:
+	return {
+		"type": {"header_name": "Type", "type": "string", "default": ""},
+		"color": {"header_name": "Color", "type": "string", "default": "", "is_id": true},
+		"color_code_1": {"header_name": "Color Codes", "type": "color_hex", "default": ""},
+		"color_code_2": {"header_name": "", "column_index": 3, "type": "color_hex", "default": ""},
+		"color_code_3": {"header_name": "", "column_index": 4, "type": "color_hex", "default": ""},
+		"color_code_4": {"header_name": "", "column_index": 5, "type": "color_hex", "default": ""}
+	}
+
+## Schema untuk NPC Parser Sheet.csv - Data NPC outfit
+static func get_npc_outfit_schema() -> Dictionary:
+	return {
+		"no": {"header_name": "No.", "type": "int", "default": 0, "is_id": true},
+		"npc_name": {"header_name": "NPC Name", "type": "string", "default": ""},
+		"outfit_sets": {"header_name": "Outfit Sets", "type": "string", "default": ""},
+		"tscn_name": {"header_name": "Name .tscn", "type": "string", "default": ""},
+		"hair_type": {"header_name": "Parser Hair", "type": "npc_property_array", "default": []},
+		"hair_colors": {"header_name": "Parser Hair Color", "type": "npc_property_array", "default": []},
+		"accessories": {"header_name": "Parser Accessories", "type": "npc_property_array", "default": []},
+		"accessory_colors": {"header_name": "Parser Accessories Color", "type": "npc_property_array", "default": []},
+		"body_colors": {"header_name": "Parser Body Color", "type": "npc_property_array", "default": []},
+		"eye_colors": {"header_name": "Parser Eye Color", "type": "npc_property_array", "default": []},
+		"outfit_colors": {"header_name": "Parser Outfit Color", "type": "npc_property_array", "default": []}
+	}
+
+## Key order untuk NPC Colors JSON output
+static func get_npc_colors_key_order() -> Array:
+	return ["type", "color", "color_code_1", "color_code_2", "color_code_3", "color_code_4"]
+
+## Key order untuk NPC Outfit JSON output  
+static func get_npc_outfit_key_order() -> Array:
+	return [
+		"no", "npc_name", "outfit_sets", "tscn_name",
+		"hair_type", "hair_colors", "accessories", "accessory_colors",
+		"body_colors", "eye_colors", "outfit_colors"
+	]
+
+## NPC Colors parser configuration
+static func get_npc_colors_config() -> Dictionary:
+	return {
+		"schema": get_npc_colors_schema(),
+		"group_header": "",
+		"header_row": 0,
+		"start_row": 1,
+		"id_header": "color",
+		"metadata_header": "",
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_npc_colors_key_order()
+	}
+
+## NPC Outfit parser configuration
+static func get_npc_outfit_config() -> Dictionary:
+	return {
+		"schema": get_npc_outfit_schema(),
+		"group_header": "",
+		"header_row": 0,
+		"start_row": 1,
+		"id_header": "no.",
+		"metadata_header": "",
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_npc_outfit_key_order()
+	}
+
+## NPC Properties multi-file configuration
+## Untuk menggabungkan Colors.csv dan NPC Parser Sheet.csv menjadi npc_properties.json
+static func get_npc_properties_config() -> Dictionary:
+	return {
+		"COLORS": {
+			"filename": "Colors.csv",
+			"config": get_npc_colors_config(),
+			"required_headers": ["color", "color codes"],
+			"header_patterns": [["type", "color", "color codes"]]
+		},
+		"NPC_OUTFIT": {
+			"filename": "NPC Parser Sheet.csv",
+			"config": get_npc_outfit_config(),
+			"required_headers": ["npc name", "parser hair"],
+			"header_patterns": [["no.", "npc name", "outfit sets", "parser hair"]]
+		},
+		"output_structure": {
+			"colors": "COLORS",      # Key dalam output JSON -> source data
+			"outfit_types": "NPC_OUTFIT"
+		},
+		"transformers": {
+			"colors": "_transform_colors_data",
+			"outfit_types": "_transform_outfit_data"
+		}
+	}
+
 ## Patron System Configuration - Detection by header patterns
 static func get_patron_files_config() -> Dictionary:
 	return {

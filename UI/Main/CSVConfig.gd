@@ -10,6 +10,7 @@ enum CSVType {
 	BEVERAGE,
 	DECORATION,
 	PATRON,
+	NPC_PROPERTIES,
 	UNKNOWN
 }
 
@@ -64,6 +65,17 @@ const TYPE_CONFIGS: Dictionary = {
 		],
 		"required_headers": ["character_name"]
 	},
+	CSVType.NPC_PROPERTIES: {
+		"name": "npc_properties",
+		"group_label": "npc_data",
+		"root_name": "",
+		"header_patterns": [
+			["type", "color", "color codes"],
+			["no.", "npc name", "outfit sets", "parser hair"]
+		],
+		"required_headers": [],
+		"is_multi_file": true
+	},
 	CSVType.UNKNOWN: {
 		"name": "unknown",
 		"group_label": "items",
@@ -114,6 +126,11 @@ static func get_detection_error(csv_path: String) -> String:
 ## Deteksi tipe CSV dari header string dengan strict validation
 static func _detect_from_header(header: String, suppress_warning: bool = false) -> CSVType:
 	header = header.to_lower()
+	
+	# Check NPC_PROPERTIES type first (Colors.csv, NPC Parser Sheet.csv)
+	for pattern in TYPE_CONFIGS[CSVType.NPC_PROPERTIES]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.NPC_PROPERTIES
 	
 	# Check PATRON type first (Patrons.csv, PatronStory.csv, Orders.csv, IdleTalkReqs.csv)
 	for pattern in TYPE_CONFIGS[CSVType.PATRON]["header_patterns"]:
@@ -173,8 +190,8 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_decoration()
 		CSVType.PATRON:
 			pass # Tipe patron menggunakan parser di PatronDataLoader
-		CSVType.UNKNOWN:
-			push_warning("CSVConfig: Tidak dapat mengkonfigurasi parser untuk tipe UNKNOWN")
+		CSVType.NPC_PROPERTIES:
+			pass # Tipe NPC_PROPERTIES menggunakan multi-file parser di NPCProperties
 
 
 ## Configure generator berdasarkan tipe CSV
@@ -192,8 +209,8 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_decoration()
 		CSVType.PATRON:
 			pass # Tipe patron menggunakan generator di PatronDataLoader
-		CSVType.UNKNOWN:
-			push_warning("CSVConfig: Tidak dapat mengkonfigurasi generator untuk tipe UNKNOWN")
+		CSVType.NPC_PROPERTIES:
+			pass # Tipe NPC_PROPERTIES menggunakan multi-file generator di NPCProperties
 
 
 ## Konfigurasi parser dan generator secara bersamaan

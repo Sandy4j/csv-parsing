@@ -1,4 +1,4 @@
-﻿class_name FieldTransformers
+class_name FieldTransformers
 extends RefCounted
 
 ## Skrip untuk mengubah value field berdasarkan type
@@ -80,6 +80,10 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 			if lowered == "non alcohol" or lowered == "non-alcohol":
 				return false
 			return default_value if default_value != null else false
+		"color_hex":
+			return parse_color_hex(raw_value, default_value)
+		"npc_property_array":
+			return parse_npc_property_array(raw_value, default_value)
 		_:
 			return raw_value
 
@@ -288,3 +292,36 @@ static func _get_fanciness_text(value: int) -> String:
 		return "Fancy"
 	else:  # value > 3
 		return "Luxurious"
+
+
+## Parse color hex value
+static func parse_color_hex(raw_value: String, default_value = "") -> String:
+	var trimmed = raw_value.strip_edges()
+	if trimmed.is_empty():
+		return default_value if default_value != null else ""
+	# Tambahkan # di depan jika belum ada
+	if not trimmed.begins_with("#"):
+		return "#" + trimmed
+	return trimmed
+
+
+## Parse NPC property array format
+static func parse_npc_property_array(raw_value: String, default_value = []) -> Array:
+	var trimmed = raw_value.strip_edges()
+	if trimmed.is_empty():
+		return default_value if default_value != null else []
+	
+	var result = []
+	var parts = trimmed.split(",")
+	for part in parts:
+		var pair = part.strip_edges().split("|")
+		if pair.size() >= 2:
+			var name_val = pair[0].strip_edges()
+			var weight_str = pair[1].strip_edges()
+			var weight = weight_str.to_int() if weight_str.is_valid_int() else 0
+			result.append([name_val, weight])
+		elif pair.size() == 1 and not pair[0].strip_edges().is_empty():
+			# Jika tidak ada weight, default ke 1
+			result.append([pair[0].strip_edges(), 1])
+	return result
+
