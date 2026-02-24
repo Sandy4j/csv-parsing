@@ -94,6 +94,36 @@ func configure_for_decoration() -> JSONGenerator:
 	_default_root_name = "Decorations"
 	return self
 
+func configure_for_audio() -> JSONGenerator:
+	key_order = DataSchemas.get_audio_files_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "Audio"
+	no_root_wrapper = false
+	_is_recipe_config = false
+	_force_root_wrapper = true
+	_default_root_name = "Audio"
+	return self
+
+func configure_for_key_item() -> JSONGenerator:
+	key_order = DataSchemas.get_key_item_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "KeyItems"
+	no_root_wrapper = false
+	_is_recipe_config = false
+	_force_root_wrapper = true
+	_default_root_name = "KeyItems"
+	return self
+
+func configure_for_game_settings() -> JSONGenerator:
+	key_order = DataSchemas.get_game_settings_key_order()
+	output_format = OutputFormat.FLAT_DICT
+	root_name = ""
+	no_root_wrapper = true
+	_is_recipe_config = false
+	_force_root_wrapper = false
+	_default_root_name = ""
+	return self
+
 func configure_for_array(custom_key_order: Array = [], root: String = "Data") -> JSONGenerator:
 	key_order = custom_key_order
 	output_format = OutputFormat.ARRAY
@@ -460,3 +490,84 @@ func _escape_json_string(s: String) -> String:
 	s = s.replace("\r", "\\r")
 	s = s.replace("\t", "\\t")
 	return s
+
+## Generate JSON khusus untuk GameSettings - group by prefix
+func generate_game_settings_json(data: Dictionary) -> String:
+	# Prefix mapping: settings_name prefix -> group name
+	var prefix_map = {
+		"globals_": "Globals",
+		"patron_": "Patron",
+		"gameplay_": "Gameplay"
+	}
+	
+	# Group data dari prefix
+	var grouped: Dictionary = {}
+	for prefix in prefix_map.values():
+		grouped[prefix] = {}
+	
+	# Data bisa dalam format flat {row_id: row_data} atau grouped {group: {row_id: row_data}}
+	for key in data.keys():
+		var value = data[key]
+		if value is Dictionary:
+			# Cek apakah ini row_data langsung (memiliki settings_name) atau group
+			if value.has("settings_name"):
+				# Flat format: langsung row_data
+				_process_setting(value, prefix_map, grouped)
+			else:
+				# Grouped format: value adalah {row_id: row_data}
+				for row_id in value.keys():
+					var row_data = value[row_id]
+					if row_data is Dictionary:
+						_process_setting(row_data, prefix_map, grouped)
+	
+	# Filter non-empty groups
+	var non_empty_groups: Array = []
+	for group_name in grouped.keys():
+		if not grouped[group_name].is_empty():
+			non_empty_groups.append(group_name)
+	
+	# Build JSON output
+	var lines = []
+	lines.append("{")
+	
+	for g_idx in range(non_empty_groups.size()):
+		var group_name = non_empty_groups[g_idx]
+		var group_settings = grouped[group_name]
+		var group_comma = "," if g_idx < non_empty_groups.size() - 1 else ""
+		
+		lines.append("%s\"%s\":" % [indent_string, group_name])
+		lines.append("%s{" % [indent_string])
+		
+		var setting_keys = group_settings.keys()
+		for s_idx in range(setting_keys.size()):
+			var key = setting_keys[s_idx]
+			var value = group_settings[key]
+			var comma = "," if s_idx < setting_keys.size() - 1 else ""
+			lines.append("%s\"%s\": %s%s" % [indent_string.repeat(2), key, _value_to_json(value, 2), comma])
+		
+		lines.append("%s}%s" % [indent_string, group_comma])
+	
+	lines.append("}")
+	return "\n".join(lines)
+
+## Helper untuk process single setting
+func _process_setting(setting: Variant, prefix_map: Dictionary, grouped: Dictionary) -> void:
+	if not setting is Dictionary:
+		return
+	
+	var settings_name: String = setting.get("settings_name", "")
+	var value = setting.get("default_value", "")
+	
+	if settings_name.is_empty():
+		return
+	
+	# Cari prefix yang sesuai
+	for prefix in prefix_map.keys():
+		if settings_name.begins_with(prefix):
+			var group_name = prefix_map[prefix]
+			var key_name = settings_name.substr(prefix.length())
+			grouped[group_name][key_name] = value
+			return
+	# No match
+	pass
+

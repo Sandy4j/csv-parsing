@@ -1,4 +1,4 @@
-﻿extends Node
+extends Node
 class_name PatronDataLoader
 
 ## Loader untuk memproses 4 file CSV terkait Patron menggunakan komponen modular
@@ -189,4 +189,3 @@ func _escape_json_string(s: String) -> String:
 	s = s.replace("\t", "\\t")
 	return s
 #endregion
-

@@ -84,6 +84,8 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 			return parse_color_hex(raw_value, default_value)
 		"npc_property_array":
 			return parse_npc_property_array(raw_value, default_value)
+		"settings_value":
+			return parse_settings_value(raw_value, default_value)
 		_:
 			return raw_value
 
@@ -324,4 +326,36 @@ static func parse_npc_property_array(raw_value: String, default_value = []) -> A
 			# Jika tidak ada weight, default ke 1
 			result.append([pair[0].strip_edges(), 1])
 	return result
+
+
+## Parse settings value (field bisa berupa string, int, atau array of int)
+static func parse_settings_value(raw_value: String, default_value = "") -> Variant:
+	var trimmed = raw_value.strip_edges()
+	if trimmed.is_empty():
+		return default_value if default_value != null else ""
+	
+	# Cek apakah bisa diparse sebagai array of int
+	if trimmed.find(",") >= 0:
+		var parts = trimmed.split(",")
+		var int_array: Array = []
+		var all_ints = true
+		for part in parts:
+			var val = part.strip_edges()
+			if val.is_valid_int():
+				int_array.append(val.to_int())
+			else:
+				all_ints = false
+				break
+		if all_ints and int_array.size() > 0:
+			return int_array
+		# Return sebagai string jika tidak semua elemen bisa diparse sebagai int
+		return trimmed
+	
+	# Cek apakah bisa diparse sebagai int tunggal
+	if trimmed.is_valid_int():
+		return trimmed.to_int()
+	
+	# Return sebagai string
+	return trimmed
+
 

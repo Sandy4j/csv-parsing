@@ -9,8 +9,11 @@ enum CSVType {
 	RECIPE,
 	BEVERAGE,
 	DECORATION,
+	AUDIO,
+	KEY_ITEM,
 	PATRON,
 	NPC_PROPERTIES,
+	GAME_SETTINGS,
 	UNKNOWN
 }
 
@@ -50,6 +53,20 @@ const TYPE_CONFIGS: Dictionary = {
 		"header_patterns": [["no.", "type", "filename", "name", "price", "description"]],
 		"required_headers": ["no.", "name", "filename"]
 	},
+	CSVType.AUDIO: {
+		"name": "audio",
+		"group_label": "audio_files",
+		"root_name": "Audio",
+		"header_patterns": [["id", "file_name", "gain", "pitch_min_max"]],
+		"required_headers": ["id", "file_name"]
+	},
+	CSVType.KEY_ITEM: {
+		"name": "key_item",
+		"group_label": "items",
+		"root_name": "KeyItems",
+		"header_patterns": [["id", "filename", "name_english", "description", "bonus", "character"]],
+		"required_headers": ["id", "filename", "name_english"]
+	},
 	CSVType.PATRON: {
 		"name": "patron",
 		"group_label": "characters",
@@ -75,6 +92,13 @@ const TYPE_CONFIGS: Dictionary = {
 		],
 		"required_headers": [],
 		"is_multi_file": true
+	},
+	CSVType.GAME_SETTINGS: {
+		"name": "game_settings",
+		"group_label": "settings",
+		"root_name": "",
+		"header_patterns": [["settings_name", "default_value", "keterangan"]],
+		"required_headers": ["settings_name", "default_value"]
 	},
 	CSVType.UNKNOWN: {
 		"name": "unknown",
@@ -127,6 +151,11 @@ static func get_detection_error(csv_path: String) -> String:
 static func _detect_from_header(header: String, suppress_warning: bool = false) -> CSVType:
 	header = header.to_lower()
 	
+	# Check GAME_SETTINGS type first (GameSettings.csv)
+	for pattern in TYPE_CONFIGS[CSVType.GAME_SETTINGS]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.GAME_SETTINGS
+	
 	# Check NPC_PROPERTIES type first (Colors.csv, NPC Parser Sheet.csv)
 	for pattern in TYPE_CONFIGS[CSVType.NPC_PROPERTIES]["header_patterns"]:
 		if _matches_pattern(header, pattern):
@@ -151,6 +180,16 @@ static func _detect_from_header(header: String, suppress_warning: bool = false) 
 	for pattern in TYPE_CONFIGS[CSVType.DECORATION]["header_patterns"]:
 		if _matches_pattern(header, pattern):
 			return CSVType.DECORATION
+	
+	# Check AUDIO type
+	for pattern in TYPE_CONFIGS[CSVType.AUDIO]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.AUDIO
+	
+	# Check KEY_ITEM type
+	for pattern in TYPE_CONFIGS[CSVType.KEY_ITEM]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.KEY_ITEM
 	
 	# Check INGREDIENT type
 	for pattern in TYPE_CONFIGS[CSVType.INGREDIENT]["header_patterns"]:
@@ -188,10 +227,16 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_beverage()
 		CSVType.DECORATION:
 			parser.configure_for_decoration()
+		CSVType.AUDIO:
+			parser.configure_for_audio()
+		CSVType.KEY_ITEM:
+			parser.configure_for_key_item()
 		CSVType.PATRON:
 			pass # Tipe patron menggunakan parser di PatronDataLoader
 		CSVType.NPC_PROPERTIES:
 			pass # Tipe NPC_PROPERTIES menggunakan multi-file parser di NPCProperties
+		CSVType.GAME_SETTINGS:
+			parser.configure_for_game_settings()
 
 
 ## Configure generator berdasarkan tipe CSV
@@ -207,10 +252,16 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_beverage()
 		CSVType.DECORATION:
 			generator.configure_for_decoration()
+		CSVType.AUDIO:
+			generator.configure_for_audio()
+		CSVType.KEY_ITEM:
+			generator.configure_for_key_item()
 		CSVType.PATRON:
 			pass # Tipe patron menggunakan generator di PatronDataLoader
 		CSVType.NPC_PROPERTIES:
 			pass # Tipe NPC_PROPERTIES menggunakan multi-file generator di NPCProperties
+		CSVType.GAME_SETTINGS:
+			generator.configure_for_game_settings()
 
 
 ## Konfigurasi parser dan generator secara bersamaan

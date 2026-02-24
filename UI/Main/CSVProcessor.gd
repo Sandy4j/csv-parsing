@@ -31,7 +31,8 @@ func should_confirm_merge(type: CSVConfig.CSVType) -> bool:
 		CSVConfig.CSVType.INGREDIENT, \
 		CSVConfig.CSVType.RECIPE, \
 		CSVConfig.CSVType.BEVERAGE, \
-		CSVConfig.CSVType.DECORATION:
+		CSVConfig.CSVType.DECORATION, \
+		CSVConfig.CSVType.KEY_ITEM:
 			return true
 	return false
 
@@ -61,7 +62,19 @@ func process_single_csv(csv_path: String, output_path: String, csv_type: CSVConf
 	
 	var fatal_array_issue: bool = _parser.has_fatal_warnings()
 	var json_string: String = ""
-	if fatal_array_issue:
+	
+	# Special handler untuk GAME_SETTINGS
+	if csv_type == CSVConfig.CSVType.GAME_SETTINGS:
+		json_string = _json_generator.generate_game_settings_json(data_to_export)
+		if not json_string.is_empty():
+			var file = FileAccess.open(output_path, FileAccess.WRITE)
+			if file:
+				file.store_string(json_string)
+				file.close()
+			else:
+				processing_error.emit(["Gagal menulis file JSON"])
+				return
+	elif fatal_array_issue:
 		json_string = _json_generator.generate_json_string(data_to_export)
 	else:
 		json_string = _json_generator.generate_json_to_path(data_to_export, output_path)
@@ -124,7 +137,8 @@ func process_batch_merge(base_csv_path: String, final_output_path: String) -> vo
 		CSVConfig.CSVType.INGREDIENT,
 		CSVConfig.CSVType.RECIPE,
 		CSVConfig.CSVType.BEVERAGE,
-		CSVConfig.CSVType.DECORATION
+		CSVConfig.CSVType.DECORATION,
+		CSVConfig.CSVType.KEY_ITEM
 	]
 	
 	# Create temp directory
@@ -181,7 +195,7 @@ func process_batch_merge(base_csv_path: String, final_output_path: String) -> vo
 		all_errors.insert(0, skip_msg)
 	
 	if temp_json_paths.is_empty():
-		processing_error.emit(["Tidak ada file CSV yang valid untuk di-merge (hanya INGREDIENT, RECIPE, BEVERAGE, DECORATION)."])
+		processing_error.emit(["Tidak ada file CSV yang valid untuk di-merge (hanya INGREDIENT, RECIPE, BEVERAGE, DECORATION, KEY_ITEM)."])
 		if not all_errors.is_empty():
 			processing_error.emit(all_errors)
 		if DirAccess.dir_exists_absolute(temp_dir):

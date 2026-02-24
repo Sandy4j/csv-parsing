@@ -1,4 +1,4 @@
-﻿class_name PatronTransformer
+class_name PatronTransformer
 extends RefCounted
 
 ## Script untuk mentransformasi data mentah patron ke format JSON
@@ -11,6 +11,7 @@ static func generate_character_json(data: Dictionary) -> Dictionary:
 	var idletalk_data: Array = data.get("idletalk_data", [])
 	
 	var spawn_req: String = str(patron_info.get("required_story_id_to_spawn", ""))
+	var stop_req: String = str(patron_info.get("required_story_id_to_stop",""))
 	var json_output: Dictionary = {}
 
 	json_output["character_name"] = character_name
@@ -27,6 +28,7 @@ static func generate_character_json(data: Dictionary) -> Dictionary:
 	json_output["required_story_id_to_name"] = str(patron_info.get("required_story_id_to_name", ""))
 	
 	json_output["required_story_id_to_spawn"] = _parse_array_field(spawn_req) if not spawn_req.is_empty() else []
+	json_output["required_story_id_to_stop"] = _parse_array_field(stop_req) if not stop_req.is_empty() else []
 	json_output["story_requirements"] = _build_story_requirements(story_data)
 	json_output["idle_talk_requirements"] = _build_idle_talk_requirements(idletalk_data)
 	json_output["orders"] = _build_orders(orders_data, character_name)

@@ -17,6 +17,7 @@ var start_row: int = 1                  # Baris mulai data (setelah header)
 var id_header: String = ""              # Nama header untuk ID
 var skip_empty_groups: bool = true
 var default_group_name: String = "Uncategorized"
+var skip_non_numeric_id: bool = false   # Skip baris dengan ID non-numeric
 
 # Metadata configuration (header-based)
 var metadata_header: String = ""        # Nama header untuk deteksi metadata type
@@ -122,63 +123,55 @@ func get_fatal_error_messages() -> Array[String]:
 ## Preset Konfigurasi untuk CSV file diambil dari DataSchemas
 func configure_for_dialog() -> CSVParser:
 	var config = DataSchemas.get_dialog_config()
-	schema = config.schema
-	group_header = config.group_header.to_lower()
-	header_row = config.header_row
-	start_row = config.start_row
-	id_header = config.id_header.to_lower()
-	metadata_header = config.metadata_header.to_lower()
-	metadata_value_header = config.metadata_value_header.to_lower()
-	supported_metadata_types = config.supported_metadata_types
+	_apply_config(config)
 	return self
 
 func configure_for_ingredient() -> CSVParser:
 	var config = DataSchemas.get_ingredient_config()
-	schema = config.schema
-	group_header = config.group_header.to_lower()
-	header_row = config.header_row
-	start_row = config.start_row
-	id_header = config.id_header.to_lower()
-	metadata_header = config.metadata_header.to_lower()
-	metadata_value_header = config.metadata_value_header.to_lower()
-	supported_metadata_types = config.supported_metadata_types
+	_apply_config(config)
 	return self
 
 func configure_for_recipe() -> CSVParser:
 	var config = DataSchemas.get_recipe_config()
-	schema = config.schema
-	group_header = config.group_header.to_lower()
-	header_row = config.header_row
-	start_row = config.start_row
-	id_header = config.id_header.to_lower()
-	metadata_header = config.metadata_header.to_lower()
-	metadata_value_header = config.metadata_value_header.to_lower()
-	supported_metadata_types = config.supported_metadata_types
+	_apply_config(config)
 	return self
 
 func configure_for_beverage() -> CSVParser:
 	var config = DataSchemas.get_beverage_config()
-	schema = config.schema
-	group_header = config.group_header.to_lower()
-	header_row = config.header_row
-	start_row = config.start_row
-	id_header = config.id_header.to_lower()
-	metadata_header = config.metadata_header.to_lower()
-	metadata_value_header = config.metadata_value_header.to_lower()
-	supported_metadata_types = config.supported_metadata_types
+	_apply_config(config)
 	return self
 
 func configure_for_decoration() -> CSVParser:
 	var config = DataSchemas.get_decoration_config()
-	schema = config.schema
-	group_header = config.group_header.to_lower()
-	header_row = config.header_row
-	start_row = config.start_row
-	id_header = config.id_header.to_lower()
-	metadata_header = config.metadata_header.to_lower()
-	metadata_value_header = config.metadata_value_header.to_lower()
-	supported_metadata_types = config.supported_metadata_types
+	_apply_config(config)
 	return self
+
+func configure_for_audio() -> CSVParser:
+	var config = DataSchemas.get_audio_files_config()
+	_apply_config(config)
+	return self
+
+func configure_for_key_item() -> CSVParser:
+	var config = DataSchemas.get_key_item_config()
+	_apply_config(config)
+	return self
+
+func configure_for_game_settings() -> CSVParser:
+	var config = DataSchemas.get_game_settings_config()
+	_apply_config(config)
+	return self
+
+## Helper function untuk apply config dengan default values
+func _apply_config(config: Dictionary) -> void:
+	schema = config.get("schema", {})
+	group_header = config.get("group_header", "").to_lower()
+	header_row = config.get("header_row", 0)
+	start_row = config.get("start_row", 1)
+	id_header = config.get("id_header", "").to_lower()
+	metadata_header = config.get("metadata_header", "").to_lower()
+	metadata_value_header = config.get("metadata_value_header", "").to_lower()
+	supported_metadata_types = config.get("supported_metadata_types", [])
+	skip_non_numeric_id = config.get("skip_non_numeric_id", false)
 
 
 ## Fungsi untuk parsing CSV file
@@ -236,6 +229,10 @@ func parse_csv_text(csv_text: String) -> bool:
 			_store_metadata(row)
 			continue
 		
+		# Skip baris dengan ID non-numeric jika config aktif
+		if skip_non_numeric_id and _should_skip_non_numeric_row(row):
+			continue
+		
 		var row_data = _process_row(row, i + 1)
 		if row_data.is_empty():
 			continue
@@ -245,6 +242,29 @@ func parse_csv_text(csv_text: String) -> bool:
 	
 	_update_available_groups()
 	return true
+
+
+## Cek apakah baris harus di-skip karena ID non-numeric
+func _should_skip_non_numeric_row(row: Array) -> bool:
+	# Cari kolom ID dari schema
+	for field_name in schema:
+		var field_config = schema[field_name]
+		if field_config.get("is_id", false):
+			var header_name = field_config.get("header_name", "").to_lower()
+			var col_index = -1
+			
+			if field_config.has("column_index"):
+				col_index = field_config.get("column_index")
+			elif _header_map.has(header_name):
+				col_index = _header_map[header_name]
+			
+			if col_index >= 0 and col_index < row.size():
+				var id_value = row[col_index].strip_edges()
+				# Skip jika ID kosong atau tidak bisa dikonversi ke integer
+				if id_value.is_empty() or not id_value.is_valid_int():
+					return true
+			break
+	return false
 
 
 ## Build header map dari baris header CSV

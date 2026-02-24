@@ -1,4 +1,4 @@
-﻿class_name DataSchemas
+class_name DataSchemas
 extends RefCounted
 
 ## Preset skema untuk parsing CSV data
@@ -26,7 +26,6 @@ static func get_dialog_schema() -> Dictionary:
 		"music_effect": {"header_name": "music_effect", "type": "string", "default": ""}
 	}
 
-
 ## Key order untuk dialog JSON output
 static func get_dialog_key_order() -> Array:
 	return [
@@ -36,7 +35,6 @@ static func get_dialog_key_order() -> Array:
 		"give_item", "chapterid", "goto",
 		"special_effects", "sound_effect", "music_effect"
 	]
-
 
 ## Dialog parser configuration
 static func get_dialog_config() -> Dictionary:
@@ -52,6 +50,33 @@ static func get_dialog_config() -> Dictionary:
 		"key_order": get_dialog_key_order()
 	}
 
+## Untuk Items Type
+## Schema untuk Key Item CSV
+static func get_key_item_schema() -> Dictionary:
+	return {
+	"id": {"header_name": "ID", "type": "int", "is_id": true},
+	"filename": {"header_name": "filename", "type": "string", "default": ""},
+	"nameEnglish": {"header_name": "name_english", "type": "string", "default": ""},
+	"description": {"header_name": "description", "type": "string", "default": ""},
+	"bonus": {"header_name": "bonus", "type": "array", "default": []},
+	"character": {"header_name": "character", "type": "string", "default": ""},
+	}
+	
+## Key order untuk Key Item JSON output	
+static func get_key_item_key_order() -> Array:
+	return ["id", "filename", "nameEnglish", "description", "bonus", "character"]
+	
+## Key Item parser configuration
+static func get_key_item_config() -> Dictionary:
+	return {
+	"schema": get_key_item_schema(),
+	"group_header": "",
+	"header_row": 0,
+	"start_row": 1,
+	"id_header": "id",
+	"key_order": get_key_item_key_order(),
+	"skip_non_numeric_id": true
+	}	
 
 ## Schema untuk Ingredient Data CSV
 static func get_ingredient_schema() -> Dictionary:
@@ -77,7 +102,6 @@ static func get_ingredient_schema() -> Dictionary:
 		"shopLocation": {"header_name": "Where to Get", "type": "string", "default": ""}
 	}
 
-
 ## Key order untuk Ingredient JSON output
 static func get_ingredient_key_order() -> Array:
 	return [
@@ -85,7 +109,6 @@ static func get_ingredient_key_order() -> Array:
 		"iconBig", "iconHovered", "iconFocused", "iconDefault", "iconFull",
 		"traits", "unlockPrice", "shopLocation"
 	]
-
 
 ## Ingredient parser configuration
 static func get_ingredient_config() -> Dictionary:
@@ -95,12 +118,8 @@ static func get_ingredient_config() -> Dictionary:
 		"header_row": 0,                  # Baris ke-0 adalah header
 		"start_row": 1,                   # Skip header row
 		"id_header": "ingredientid",     # IngredientId sebagai ID
-		"metadata_header": "",            # No metadata
-		"metadata_value_header": "",
-		"supported_metadata_types": [],
 		"key_order": get_ingredient_key_order(),
 	}
-
 
 ## Schema untuk Recipe Data CSV
 static func get_recipe_schema() -> Dictionary:
@@ -142,7 +161,6 @@ static func get_recipe_schema() -> Dictionary:
 		"eat_duration": {"header_name": "eat_duration", "type": "int", "default": 0}
 	}
 
-
 ## Key order untuk Recipe JSON output
 static func get_recipe_key_order() -> Array:
 	return [
@@ -152,7 +170,6 @@ static func get_recipe_key_order() -> Array:
 		"icon3", "icon2", "icon1", "iconEmpty",
 		"recipe", "trait", "traits", "price", "eat_duration"
 	]
-
 
 ## Recipe parser configuration
 static func get_recipe_config() -> Dictionary:
@@ -223,6 +240,7 @@ static func get_decoration_schema() -> Dictionary:
 		"price": {"header_name": "price", "type": "int", "default": 0},
 		"description": {"header_name": "description", "type": "string", "default": ""},
 		"sprite": {"header_name": "", "type": "string", "default": "placeholder"},
+		"monoslot": {"header_name": "", "type": "bool", "default": false},
 		"fileName": {"header_name": "filename", "type": "string", "default": ""}
 	}
 
@@ -230,7 +248,7 @@ static func get_decoration_schema() -> Dictionary:
 static func get_decoration_key_order() -> Array:
 	return [
 		"id", "type", "nameEnglish", "price",
-		"description", "sprite", "fileName"
+		"description", "sprite", "monoslot", "fileName"
 	]
 	
 ## Decoration parser configuration
@@ -246,11 +264,37 @@ static func get_decoration_config() -> Dictionary:
 		"supported_metadata_types": [],
 		"key_order": get_decoration_key_order(),
 		"output_wrapper": "Decorations",
+	}	
+
+## Untuk Audio files
+## Schema untuk Audio Files
+static func get_audio_files_schema() -> Dictionary:
+	return {
+	"id": {"header_name": "id", "type": "string", "default": "", "is_id": true},
+	"filename": {"header_name": "file_name", "type": "string", "default": ""},
+	"gain": {"header_name": "gain", "type": "float", "default": 1.0},
+	"pitch_min_max": {"header_name": "pitch_min_max", "type": "float_range", "default": [1.0, 1.0]}
+	}
+
+## Key order untuk Audio Files JSON output
+static func get_audio_files_key_order() -> Array:
+	return ["id", "filename", "gain", "pitch_min_max"]
+	
+## Audio Files parser configuration
+static func get_audio_files_config() -> Dictionary:
+	return {
+	"schema": get_audio_files_schema(),
+	"group_header": "",
+	"header_row": 0,
+	"start_row": 1,
+	"id_header": "",
+	"metadata_header": "",
+	"metadata_value_header": "",
+	"supported_metadata_types": [],
+	"key_order": get_audio_files_key_order()
 	}
 	
 ## Schema untuk NPC Properties CSV	
-	
-
 ## Schema untuk Colors.csv - Data warna
 static func get_npc_colors_schema() -> Dictionary:
 	return {
@@ -319,7 +363,6 @@ static func get_npc_outfit_config() -> Dictionary:
 	}
 
 ## NPC Properties multi-file configuration
-## Untuk menggabungkan Colors.csv dan NPC Parser Sheet.csv menjadi npc_properties.json
 static func get_npc_properties_config() -> Dictionary:
 	return {
 		"COLORS": {
@@ -342,6 +385,29 @@ static func get_npc_properties_config() -> Dictionary:
 			"colors": "_transform_colors_data",
 			"outfit_types": "_transform_outfit_data"
 		}
+	}
+
+## Schema untuk GameSettings
+static func get_game_settings_schema() -> Dictionary:
+	return {
+		"settings_name": {"header_name": "settings_name", "type": "string", "is_id": true},
+		"default_value": {"header_name": "default_value", "type": "settings_value", "default": ""}
+	}
+
+## Key order untuk GameSettings JSON output
+static func get_game_settings_key_order() -> Array:
+	return ["settings_name", "default_value"]
+
+## GameSettings parser configuration
+static func get_game_settings_config() -> Dictionary:
+	return {
+		"schema": get_game_settings_schema(),
+		"group_header": "",
+		"header_row": 0,
+		"start_row": 1,
+		"id_header": "settings_name",
+		"key_order": get_game_settings_key_order(),
+		"output_format": "settings_grouped"  # Custom format untuk grouping by prefix
 	}
 
 ## Patron System Configuration - Detection by header patterns
@@ -368,3 +434,7 @@ static func get_patron_files_config() -> Dictionary:
 			"required_headers": ["idletalkreqs", "character_name", "chapter_name"]
 		}
 	}
+
+
+
+	
