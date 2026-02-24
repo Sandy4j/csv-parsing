@@ -99,8 +99,20 @@ static func _log_error(error_log: Array, message: String, row_id: String = "", l
 		error_log.append(err)
 
 
+## Cek apakah field hanya berisi separator tanpa konten
+static func _is_all_empty_parts(field: String) -> bool:
+	var parts = field.split(",")
+	for part in parts:
+		if not part.strip_edges().is_empty():
+			return false
+	return true
+
+
 ## Parse field menjadi array string
-static func parse_array(field: String) -> Array:
+static func parse_array(field: String) -> Variant:
+	if _is_all_empty_parts(field):
+		return ""
+	
 	var result = []
 	var parts = field.split(",")
 	for part in parts:
@@ -111,7 +123,10 @@ static func parse_array(field: String) -> Array:
 
 
 ## Parse field menjadi array integer
-static func parse_array_int(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0) -> Array:
+static func parse_array_int(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0) -> Variant:
+	if _is_all_empty_parts(field):
+		return ""
+	
 	var result = []
 	var parts = field.split(",")
 	for i in range(parts.size()):
@@ -127,7 +142,10 @@ static func parse_array_int(field: String, error_log: Array = [], context: Strin
 
 ## Parse scene_properties dengan konversi boolean
 ## Array harus memiliki tepat 5 elemen (comma-separated, empty slots allowed)
-static func parse_scene_props(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0, field_name: String = "scene_properties") -> Array:
+static func parse_scene_props(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0, field_name: String = "scene_properties") -> Variant:
+	if _is_all_empty_parts(field):
+		return ""
+	
 	var result = []
 	var parts = field.split(",")
 	
@@ -172,7 +190,10 @@ static func parse_scene_props(field: String, error_log: Array = [], context: Str
 
 ## Parse next_line_properties dengan konversi tipe
 ## Array harus memiliki tepat 5 elemen (comma-separated, empty slots allowed)
-static func parse_next_line(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0, field_name: String = "next_line_properties") -> Array:
+static func parse_next_line(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0, field_name: String = "next_line_properties") -> Variant:
+	if _is_all_empty_parts(field):
+		return ""
+	
 	var result = []
 	var parts = field.split(",")
 	
@@ -204,7 +225,10 @@ static func parse_next_line(field: String, error_log: Array = [], context: Strin
 
 
 ## Parsing sesuai dengan traits fields
-static func parse_traits(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0) -> Dictionary:
+static func parse_traits(field: String, error_log: Array = [], context: String = "", row_id: String = "", line_number: int = 0) -> Variant:
+	if _is_all_empty_parts(field):
+		return ""
+	
 	var result = {}
 	var parts = field.split(",")
 	var keys = ["richness", "boldness", "fanciness"]
@@ -310,10 +334,13 @@ static func parse_color_hex(raw_value: String, default_value = "") -> String:
 
 
 ## Parse NPC property array format
-static func parse_npc_property_array(raw_value: String, default_value = []) -> Array:
+static func parse_npc_property_array(raw_value: String, default_value = []) -> Variant:
 	var trimmed = raw_value.strip_edges()
 	if trimmed.is_empty():
 		return default_value if default_value != null else []
+	
+	if _is_all_empty_parts(trimmed):
+		return ""
 	
 	var result = []
 	var parts = trimmed.split(",")
@@ -335,6 +362,9 @@ static func parse_settings_value(raw_value: String, default_value = "") -> Varia
 	var trimmed = raw_value.strip_edges()
 	if trimmed.is_empty():
 		return default_value if default_value != null else ""
+	
+	if _is_all_empty_parts(trimmed):
+		return ""
 	
 	# Cek apakah bisa diparse sebagai array of int
 	if trimmed.find(",") >= 0:
