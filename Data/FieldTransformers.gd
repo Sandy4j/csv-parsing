@@ -49,17 +49,17 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 		"bool":
 			return raw_value.to_lower() == "true"
 		"array":
-			return parse_array(raw_value)
+			return _apply_default_if_empty(parse_array(raw_value), default_value, [])
 		"array_int":
-			return parse_array_int(raw_value, error_log, context, row_id, line_number)
+			return _apply_default_if_empty(parse_array_int(raw_value, error_log, context, row_id, line_number), default_value, [])
 		"scene_props":
-			return parse_scene_props(raw_value, error_log, context, row_id, line_number, field_name if not field_name.is_empty() else "scene_properties")
+			return _apply_default_if_empty(parse_scene_props(raw_value, error_log, context, row_id, line_number, field_name if not field_name.is_empty() else "scene_properties"), default_value, [])
 		"next_line":
-			return parse_next_line(raw_value, error_log, context, row_id, line_number, field_name if not field_name.is_empty() else "next_line_properties")
+			return _apply_default_if_empty(parse_next_line(raw_value, error_log, context, row_id, line_number, field_name if not field_name.is_empty() else "next_line_properties"), default_value, [])
 		"traits":
-			return parse_traits(raw_value, error_log, context, row_id, line_number)
+			return _apply_default_if_empty(parse_traits(raw_value, error_log, context, row_id, line_number), default_value, {})
 		"trait_text":
-			return raw_value  # Trait text is passed through as-is, calculated separately
+			return raw_value 
 		"recipe_ingredient":
 			return parse_recipe_ingredient(raw_value)
 		"int_dash":
@@ -83,11 +83,11 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 		"color_hex":
 			return parse_color_hex(raw_value, default_value)
 		"npc_property_array":
-			return parse_npc_property_array(raw_value, default_value)
+			return _apply_default_if_empty(parse_npc_property_array(raw_value, default_value), default_value, [])
 		"settings_value":
-			return parse_settings_value(raw_value, default_value)
+			return _apply_default_if_empty(parse_settings_value(raw_value, default_value), default_value, "")
 		"give_item":
-			return parse_give_item(raw_value, default_value)
+			return _apply_default_if_empty(parse_give_item(raw_value, default_value), default_value, [])
 		_:
 			return raw_value
 
@@ -97,6 +97,15 @@ static func _log_error(error_log: Array, message: String, row_id: String = "", l
 	if error_log != null and not message.is_empty():
 		var err = create_error(message, row_id, line_number, field, is_fatal)
 		error_log.append(err)
+
+
+## Jika result adalah string kosong, return default sesuai tipe default_value
+static func _apply_default_if_empty(result: Variant, default_value: Variant, fallback: Variant) -> Variant:
+	if result is String and result == "":
+		if default_value != null:
+			return default_value
+		return fallback
+	return result
 
 
 ## Cek apakah field hanya berisi separator tanpa konten
