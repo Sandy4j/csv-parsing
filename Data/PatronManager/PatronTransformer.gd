@@ -15,7 +15,9 @@ static func generate_character_json(data: Dictionary) -> Dictionary:
 	var json_output: Dictionary = {}
 
 	json_output["character_name"] = character_name
-	json_output["character_name_stranger"] = str(patron_info.get("character_name_stranger", ""))
+	json_output["character_alias"] = str(patron_info.get("character_alias", ""))
+	json_output["character_nick"] = str(patron_info.get("character_nick", ""))
+	json_output["character_full"] = str(patron_info.get("character_full", ""))
 	json_output["patron_wealth"] = str(patron_info.get("patron_wealth", "Low"))
 	json_output["partner_name"] = _parse_array_field(str(patron_info.get("partner_name", "")))
 	json_output["is_spawnable"] = _parse_bool(str(patron_info.get("is_spawnable", "TRUE")))
@@ -27,8 +29,8 @@ static func generate_character_json(data: Dictionary) -> Dictionary:
 	json_output["days_spawnable"] = _parse_days_array(str(patron_info.get("day_spawnable", "")))
 	json_output["required_story_id_to_name"] = str(patron_info.get("required_story_id_to_name", ""))
 	
-	json_output["required_story_id_to_spawn"] = _parse_array_field(spawn_req) if not spawn_req.is_empty() else []
-	json_output["required_story_id_to_stop"] = _parse_array_field(stop_req) if not stop_req.is_empty() else []
+	json_output["required_story_id_to_spawn"] = spawn_req
+	json_output["required_story_id_to_stop"] = stop_req
 	json_output["story_requirements"] = _build_story_requirements(story_data)
 	json_output["idle_talk_requirements"] = _build_idle_talk_requirements(idletalk_data)
 	json_output["orders"] = _build_orders(orders_data, character_name)
