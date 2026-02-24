@@ -86,6 +86,8 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 			return parse_npc_property_array(raw_value, default_value)
 		"settings_value":
 			return parse_settings_value(raw_value, default_value)
+		"give_item":
+			return parse_give_item(raw_value, default_value)
 		_:
 			return raw_value
 
@@ -358,4 +360,34 @@ static func parse_settings_value(raw_value: String, default_value = "") -> Varia
 	# Return sebagai string
 	return trimmed
 
+
+## Parse give_item field
+static func parse_give_item(field: String, default_value = []) -> Variant:
+	var trimmed = field.strip_edges()
+	if trimmed.is_empty():
+		return default_value if default_value != null else []
+	
+	var parts = trimmed.split(",")
+	var has_content = false
+	for part in parts:
+		if not part.strip_edges().is_empty():
+			has_content = true
+			break
+	
+	# Jika semua kosong seperti ",,," return string kosong
+	if not has_content:
+		return ""
+	
+	# Parse array
+	var result = []
+	for part in parts:
+		var val = part.strip_edges()
+		if val.is_empty():
+			result.append("")
+		elif val.is_valid_int():
+			result.append(val.to_int())
+		else:
+			result.append(val)
+	
+	return result
 

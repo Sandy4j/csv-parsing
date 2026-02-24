@@ -18,7 +18,7 @@ static func get_dialog_schema() -> Dictionary:
 		"scene_properties": {"header_name": "scene_properties", "type": "scene_props", "default": []},
 		"dialogue_choice": {"header_name": "dialogue_choice", "type": "string", "default": ""},
 		"next_line_properties": {"header_name": "next_line_properties", "type": "next_line", "default": []},
-		"give_item": {"header_name": "give_item", "type": "array", "default": []},
+		"give_item": {"header_name": "give_item", "type": "give_item", "default": []},
 		"chapterid": {"header_name": "chapter", "type": "string", "default": ""},
 		"goto": {"header_name": "goto", "type": "string", "default": ""},
 		"special_effects": {"header_name": "special_effects", "type": "array", "default": []},
