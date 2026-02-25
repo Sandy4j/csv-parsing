@@ -311,8 +311,10 @@ func _update_chapter_filter(csv_path: String) -> void:
 	if groups.is_empty():
 		ui_state_manager.show_file_type_selected(type_name)
 		chapter_filter_container.visible = false
+		chapter_scroll_container.visible = false
 	else:
 		chapter_filter_container.visible = true
+		chapter_scroll_container.visible = true
 		Group_Manager.populate(groups)
 		var group_label = CSVConfig.get_group_label(current_csv_type)
 		ui_state_manager.show_groups_found(groups.size(), group_label)
@@ -493,6 +495,7 @@ func _validate_paths(csv_path: String, output_path: String) -> bool:
 func _reset_chapter_filter() -> void:
 	Group_Manager.clear()
 	chapter_filter_container.visible = false
+	chapter_scroll_container.visible = false
 
 
 

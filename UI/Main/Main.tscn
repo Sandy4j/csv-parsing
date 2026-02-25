@@ -120,7 +120,6 @@ placeholder_text = "Select CSV file..."
 editable = false
 
 [node name="OutputSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
-visible = false
 layout_mode = 2
 
 [node name="OutputLabel" type="Label" parent="Panel/VBoxContainer/OutputSection"]
@@ -141,7 +140,6 @@ layout_mode = 2
 text = "Browse"
 
 [node name="RootNameSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
-visible = false
 layout_mode = 2
 
 [node name="RootNameLabel" type="Label" parent="Panel/VBoxContainer/RootNameSection"]
@@ -156,7 +154,6 @@ size_flags_horizontal = 3
 placeholder_text = "Type root name..."
 
 [node name="ButtonsContainer" type="HBoxContainer" parent="Panel/VBoxContainer"]
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 10
 
@@ -169,7 +166,6 @@ text = "Generate JSON"
 
 [node name="ChapterFilterContainer" type="VBoxContainer" parent="Panel/VBoxContainer"]
 unique_name_in_owner = true
-visible = false
 layout_mode = 2
 theme_override_constants/separation = 5
 

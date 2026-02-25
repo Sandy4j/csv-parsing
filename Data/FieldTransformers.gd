@@ -23,6 +23,9 @@ static func transform(raw_value: String, field_type: String, default_value = nul
 	if raw_value.is_empty() and default_value != null:
 		return default_value
 	
+	if _is_all_empty_parts(raw_value):
+		return _get_empty_default_for_type(field_type, default_value)
+	
 	match field_type:
 		"string":
 			return raw_value
@@ -106,6 +109,29 @@ static func _apply_default_if_empty(result: Variant, default_value: Variant, fal
 			return default_value
 		return fallback
 	return result
+
+
+## Return default value sesuai type field untuk kasus empty parts (seperti ",,,")
+static func _get_empty_default_for_type(field_type: String, default_value: Variant) -> Variant:
+	match field_type:
+		"string", "trait_text", "color_hex":
+			return default_value if default_value != null else ""
+		"int", "int_dash":
+			return default_value if default_value != null else 0
+		"float":
+			return default_value if default_value != null else 0.0
+		"bool", "alcohol_flag":
+			return default_value if default_value != null else false
+		"array", "array_int", "scene_props", "next_line", "npc_property_array", "give_item", "special_effects":
+			return default_value if default_value != null else []
+		"traits":
+			return default_value if default_value != null else {}
+		"recipe_ingredient":
+			return default_value if default_value != null else -1
+		"settings_value":
+			return default_value if default_value != null else ""
+		_:
+			return default_value if default_value != null else ""
 
 
 ## Cek apakah field hanya berisi separator tanpa konten
