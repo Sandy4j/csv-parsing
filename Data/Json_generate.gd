@@ -104,6 +104,26 @@ func configure_for_audio() -> JSONGenerator:
 	_default_root_name = "Audio"
 	return self
 
+func configure_for_sfx() -> JSONGenerator:
+	key_order = DataSchemas.get_sfx_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "SFX"
+	no_root_wrapper = false
+	_is_recipe_config = false
+	_force_root_wrapper = true
+	_default_root_name = "SFX"
+	return self
+
+func configure_for_music() -> JSONGenerator:
+	key_order = DataSchemas.get_music_key_order()
+	output_format = OutputFormat.ARRAY
+	root_name = "Music"
+	no_root_wrapper = false
+	_is_recipe_config = false
+	_force_root_wrapper = true
+	_default_root_name = "Music"
+	return self
+
 func configure_for_key_item() -> JSONGenerator:
 	key_order = DataSchemas.get_key_item_key_order()
 	output_format = OutputFormat.ARRAY

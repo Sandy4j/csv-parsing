@@ -293,7 +293,71 @@ static func get_audio_files_config() -> Dictionary:
 	"supported_metadata_types": [],
 	"key_order": get_audio_files_key_order()
 	}
-	
+
+## Schema untuk SFX.csv
+static func get_sfx_schema() -> Dictionary:
+	return {
+		"no": {"header_name": "No.", "type": "int", "default": 0, "is_id": true},
+		"implemented": {"header_name": "Implemented", "type": "bool", "default": false},
+		"id": {"header_name": "id", "type": "string", "default": ""},
+		"gain": {"header_name": "gain", "type": "float", "default": 0.0},
+		"pitch_min_max": {"header_name": "pitch_min_max", "type": "float_range", "default": [1.0, 1.0]},
+		"filename": {"header_name": "file_name", "type": "array", "default": []},
+		"desc": {"header_name": "Desc", "type": "string", "default": ""},
+		"penggunaan": {"header_name": "Penggunaan", "type": "string", "default": ""},
+		"referensi": {"header_name": "Referensi di Game", "type": "string", "default": ""},
+		"safe": {"header_name": "Safe", "type": "bool", "default": false}
+	}
+
+## Key order untuk SFX JSON output
+static func get_sfx_key_order() -> Array:
+	return ["no", "implemented", "id", "gain", "pitch_min_max", "filename", "desc", "penggunaan", "referensi", "safe"]
+
+## SFX parser configuration
+static func get_sfx_config() -> Dictionary:
+	return {
+		"schema": get_sfx_schema(),
+		"group_header": "",
+		"header_row": 0,
+		"start_row": 1,
+		"id_header": "no.",
+		"metadata_header": "",
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_sfx_key_order(),
+		"skip_non_numeric_id": true
+	}
+
+## Schema untuk Music.csv
+static func get_music_schema() -> Dictionary:
+	return {
+		"no": {"header_name": "No.", "type": "int", "default": 0, "is_id": true},
+		"filename": {"header_name": "Filename", "type": "string", "default": ""},
+		"offset": {"header_name": "Offset", "type": "float_range", "default": [0.0, 0.0]},
+		"script_code": {"header_name": "Script Code", "type": "string", "default": ""},
+		"penggunaan": {"header_name": "Penggunaan", "type": "string", "default": ""},
+		"desc": {"header_name": "Desc", "type": "string", "default": ""}
+	}
+
+## Key order untuk Music JSON output
+static func get_music_key_order() -> Array:
+	return ["no", "filename", "offset", "script_code", "penggunaan", "desc"]
+
+## Music parser configuration
+static func get_music_config() -> Dictionary:
+	return {
+		"schema": get_music_schema(),
+		"group_header": "",
+		"header_row": 0,
+		"start_row": 1,
+		"id_header": "no.",
+		"metadata_header": "",
+		"metadata_value_header": "",
+		"supported_metadata_types": [],
+		"key_order": get_music_key_order(),
+		"skip_non_numeric_id": true
+	}
+
 ## Schema untuk NPC Properties CSV	
 ## Schema untuk Colors.csv - Data warna
 static func get_npc_colors_schema() -> Dictionary:

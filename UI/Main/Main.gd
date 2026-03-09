@@ -26,11 +26,13 @@ extends Control
 @onready var audio_button: Button = %AudioButton
 @onready var npc_properties_button: Button = %NPCPropertiesButton
 @onready var game_settings_button: Button = %GameSettingsButton
+@onready var sfx_button: Button = %SFXButton
+@onready var music_button: Button = %MusicButton
 @onready var output_section: HBoxContainer = $Panel/VBoxContainer/OutputSection
 @onready var root_name_section: HBoxContainer = $Panel/VBoxContainer/RootNameSection
 @onready var buttons_container: HBoxContainer = $Panel/VBoxContainer/ButtonsContainer
 
-enum FileType { NONE, PATRONS, DIALOG, ITEMS, AUDIO, NPC_PROPERTIES, SETTINGS }
+enum FileType { NONE, PATRONS, DIALOG, ITEMS, AUDIO, NPC_PROPERTIES, SETTINGS, SFX, MUSIC }
 var selected_file_type: FileType = FileType.NONE
 
 const CSVParserScript = preload("res://Data/Parser.gd")
@@ -103,6 +105,8 @@ func _connect_file_type_buttons() -> void:
 	audio_button.pressed.connect(_on_file_type_pressed.bind(FileType.AUDIO))
 	npc_properties_button.pressed.connect(_on_file_type_pressed.bind(FileType.NPC_PROPERTIES))
 	game_settings_button.pressed.connect(_on_file_type_pressed.bind(FileType.SETTINGS))
+	sfx_button.pressed.connect(_on_file_type_pressed.bind(FileType.SFX))
+	music_button.pressed.connect(_on_file_type_pressed.bind(FileType.MUSIC))
 
 
 func _on_file_type_pressed(file_type: FileType) -> void:
@@ -112,6 +116,8 @@ func _on_file_type_pressed(file_type: FileType) -> void:
 	audio_button.button_pressed = (file_type == FileType.AUDIO)
 	npc_properties_button.button_pressed = (file_type == FileType.NPC_PROPERTIES)
 	game_settings_button.button_pressed = (file_type == FileType.SETTINGS)
+	sfx_button.button_pressed = (file_type == FileType.SFX)
+	music_button.button_pressed = (file_type == FileType.MUSIC)
 	
 	selected_file_type = file_type
 	_reset_file_selection()
@@ -151,6 +157,12 @@ func _update_sections_visibility() -> void:
 		FileType.SETTINGS:
 			output_section.visible = true
 			buttons_container.visible = true
+		FileType.SFX:
+			output_section.visible = true
+			buttons_container.visible = true
+		FileType.MUSIC:
+			output_section.visible = true
+			buttons_container.visible = true
 
 
 func _reset_file_selection() -> void:
@@ -176,6 +188,10 @@ func _get_file_type_name(file_type: FileType) -> String:
 			return "NPC Properties"
 		FileType.SETTINGS:
 			return "Game Settings"
+		FileType.SFX:
+			return "SFX"
+		FileType.MUSIC:
+			return "Music"
 	return "Unknown"
 
 
@@ -364,6 +380,16 @@ func _validate_file_for_type(path: String) -> Dictionary:
 			if detected_type == CSVConfig.CSVType.GAME_SETTINGS:
 				return { "valid": true }
 			return { "valid": false, "message": "File tidak sesuai format Game Settings. Pastikan ada kolom 'settings_name' dan 'default_value'." }
+		
+		FileType.SFX:
+			if detected_type == CSVConfig.CSVType.SFX:
+				return { "valid": true }
+			return { "valid": false, "message": "File tidak sesuai format SFX. Pastikan ada kolom 'id', 'gain', dan 'file_name'." }
+		
+		FileType.MUSIC:
+			if detected_type == CSVConfig.CSVType.MUSIC:
+				return { "valid": true }
+			return { "valid": false, "message": "File tidak sesuai format Music. Pastikan ada kolom 'filename' dan 'script code'." }
 	
 	return { "valid": false, "message": "Tipe file tidak dikenali" }
 
@@ -393,6 +419,8 @@ func _deselect_all_type_buttons() -> void:
 	audio_button.button_pressed = false
 	npc_properties_button.button_pressed = false
 	game_settings_button.button_pressed = false
+	sfx_button.button_pressed = false
+	music_button.button_pressed = false
 
 
 func _handle_patron_file_selected(path: String) -> void:
@@ -451,6 +479,10 @@ func _on_generate_pressed() -> void:
 			return
 		FileType.SETTINGS:
 			current_csv_type = CSVConfig.CSVType.GAME_SETTINGS
+		FileType.SFX:
+			current_csv_type = CSVConfig.CSVType.SFX
+		FileType.MUSIC:
+			current_csv_type = CSVConfig.CSVType.MUSIC
 		_:
 			ui_state_manager.show_error("Pilih tipe file terlebih dahulu")
 			return

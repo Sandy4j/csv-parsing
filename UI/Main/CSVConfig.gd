@@ -14,6 +14,8 @@ enum CSVType {
 	PATRON,
 	NPC_PROPERTIES,
 	GAME_SETTINGS,
+	SFX,
+	MUSIC,
 	UNKNOWN
 }
 
@@ -100,6 +102,20 @@ const TYPE_CONFIGS: Dictionary = {
 		"header_patterns": [["settings_name", "default_value", "keterangan"]],
 		"required_headers": ["settings_name", "default_value"]
 	},
+	CSVType.SFX: {
+		"name": "sfx",
+		"group_label": "sfx_files",
+		"root_name": "SFX",
+		"header_patterns": [["no.", "implemented", "id", "gain", "pitch_min_max", "file_name"]],
+		"required_headers": ["id", "file_name", "gain"]
+	},
+	CSVType.MUSIC: {
+		"name": "music",
+		"group_label": "music_files",
+		"root_name": "Music",
+		"header_patterns": [["no.", "filename", "offset", "script code", "penggunaan"]],
+		"required_headers": ["filename", "script code"]
+	},
 	CSVType.UNKNOWN: {
 		"name": "unknown",
 		"group_label": "items",
@@ -181,6 +197,16 @@ static func _detect_from_header(header: String, suppress_warning: bool = false) 
 		if _matches_pattern(header, pattern):
 			return CSVType.DECORATION
 	
+	# Check SFX type
+	for pattern in TYPE_CONFIGS[CSVType.SFX]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.SFX
+	
+	# Check MUSIC type
+	for pattern in TYPE_CONFIGS[CSVType.MUSIC]["header_patterns"]:
+		if _matches_pattern(header, pattern):
+			return CSVType.MUSIC
+	
 	# Check AUDIO type
 	for pattern in TYPE_CONFIGS[CSVType.AUDIO]["header_patterns"]:
 		if _matches_pattern(header, pattern):
@@ -229,6 +255,10 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_decoration()
 		CSVType.AUDIO:
 			parser.configure_for_audio()
+		CSVType.SFX:
+			parser.configure_for_sfx()
+		CSVType.MUSIC:
+			parser.configure_for_music()
 		CSVType.KEY_ITEM:
 			parser.configure_for_key_item()
 		CSVType.PATRON:
@@ -254,6 +284,10 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_decoration()
 		CSVType.AUDIO:
 			generator.configure_for_audio()
+		CSVType.SFX:
+			generator.configure_for_sfx()
+		CSVType.MUSIC:
+			generator.configure_for_music()
 		CSVType.KEY_ITEM:
 			generator.configure_for_key_item()
 		CSVType.PATRON:

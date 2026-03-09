@@ -151,6 +151,16 @@ func configure_for_audio() -> CSVParser:
 	_apply_config(config)
 	return self
 
+func configure_for_sfx() -> CSVParser:
+	var config = DataSchemas.get_sfx_config()
+	_apply_config(config)
+	return self
+
+func configure_for_music() -> CSVParser:
+	var config = DataSchemas.get_music_config()
+	_apply_config(config)
+	return self
+
 func configure_for_key_item() -> CSVParser:
 	var config = DataSchemas.get_key_item_config()
 	_apply_config(config)
