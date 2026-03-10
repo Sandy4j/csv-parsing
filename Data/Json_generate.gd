@@ -95,19 +95,10 @@ func configure_for_decoration() -> JSONGenerator:
 	_default_root_name = "Decorations"
 	return self
 
-func configure_for_audio() -> JSONGenerator:
-	key_order = DataSchemas.get_audio_files_key_order()
-	output_format = OutputFormat.ARRAY
-	root_name = "Audio"
-	no_root_wrapper = false
-	_is_recipe_config = false
-	_force_root_wrapper = true
-	_default_root_name = "Audio"
-	return self
 
 func configure_for_sfx() -> JSONGenerator:
 	key_order = DataSchemas.get_sfx_key_order()
-	output_format = OutputFormat.FLAT_DICT
+	output_format = OutputFormat.ID_KEYED_DICT
 	root_name = "SFX"
 	no_root_wrapper = false
 	_is_recipe_config = false
@@ -117,7 +108,7 @@ func configure_for_sfx() -> JSONGenerator:
 
 func configure_for_music() -> JSONGenerator:
 	key_order = DataSchemas.get_music_key_order()
-	output_format = OutputFormat.ARRAY
+	output_format = OutputFormat.ID_KEYED_DICT
 	root_name = "Music"
 	no_root_wrapper = false
 	_is_recipe_config = false

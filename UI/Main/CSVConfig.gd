@@ -9,7 +9,6 @@ enum CSVType {
 	RECIPE,
 	BEVERAGE,
 	DECORATION,
-	AUDIO,
 	KEY_ITEM,
 	PATRON,
 	NPC_PROPERTIES,
@@ -54,13 +53,6 @@ const TYPE_CONFIGS: Dictionary = {
 		"root_name": "Decorations",
 		"header_patterns": [["no.", "type", "filename", "name", "price", "description"]],
 		"required_headers": ["no.", "name", "filename"]
-	},
-	CSVType.AUDIO: {
-		"name": "audio",
-		"group_label": "audio_files",
-		"root_name": "Audio",
-		"header_patterns": [["id", "file_name", "gain", "pitch_min_max"]],
-		"required_headers": ["id", "file_name"]
 	},
 	CSVType.KEY_ITEM: {
 		"name": "key_item",
@@ -207,11 +199,6 @@ static func _detect_from_header(header: String, suppress_warning: bool = false) 
 		if _matches_pattern(header, pattern):
 			return CSVType.MUSIC
 	
-	# Check AUDIO type
-	for pattern in TYPE_CONFIGS[CSVType.AUDIO]["header_patterns"]:
-		if _matches_pattern(header, pattern):
-			return CSVType.AUDIO
-	
 	# Check KEY_ITEM type
 	for pattern in TYPE_CONFIGS[CSVType.KEY_ITEM]["header_patterns"]:
 		if _matches_pattern(header, pattern):
@@ -253,8 +240,6 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 			parser.configure_for_beverage()
 		CSVType.DECORATION:
 			parser.configure_for_decoration()
-		CSVType.AUDIO:
-			parser.configure_for_audio()
 		CSVType.SFX:
 			parser.configure_for_sfx()
 		CSVType.MUSIC:
@@ -282,8 +267,6 @@ static func configure_generator(generator: Node, csv_type: CSVType) -> void:
 			generator.configure_for_beverage()
 		CSVType.DECORATION:
 			generator.configure_for_decoration()
-		CSVType.AUDIO:
-			generator.configure_for_audio()
 		CSVType.SFX:
 			generator.configure_for_sfx()
 		CSVType.MUSIC:

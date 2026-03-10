@@ -266,33 +266,6 @@ static func get_decoration_config() -> Dictionary:
 		"output_wrapper": "Decorations",
 	}	
 
-## Untuk Audio files
-## Schema untuk Audio Files
-static func get_audio_files_schema() -> Dictionary:
-	return {
-	"id": {"header_name": "id", "type": "string", "default": "", "is_id": true},
-	"filename": {"header_name": "file_name", "type": "string", "default": ""},
-	"gain": {"header_name": "gain", "type": "float", "default": 1.0},
-	"pitch_min_max": {"header_name": "pitch_min_max", "type": "float_range", "default": [1.0, 1.0]}
-	}
-
-## Key order untuk Audio Files JSON output
-static func get_audio_files_key_order() -> Array:
-	return ["id", "filename", "gain", "pitch_min_max"]
-	
-## Audio Files parser configuration
-static func get_audio_files_config() -> Dictionary:
-	return {
-	"schema": get_audio_files_schema(),
-	"group_header": "",
-	"header_row": 0,
-	"start_row": 1,
-	"id_header": "",
-	"metadata_header": "",
-	"metadata_value_header": "",
-	"supported_metadata_types": [],
-	"key_order": get_audio_files_key_order()
-	}
 
 ## Schema untuk SFX.csv
 static func get_sfx_schema() -> Dictionary:
@@ -300,7 +273,7 @@ static func get_sfx_schema() -> Dictionary:
 		"id": {"header_name": "id", "type": "string", "default": "", "is_id": true},
 		"filename": {"header_name": "file_name", "type": "array", "default": []},
 		"gain": {"header_name": "gain", "type": "float", "default": 0.0},
-		"pitch_min_max": {"header_name": "pitch_min_max", "type": "float_range", "default": [1.0, 1.0]},
+		"pitch_min_max": {"header_name": "pitch_min_max", "type": "float_range", "default": [1.0, 1.0]}
 	}
 
 ## Key order untuk SFX JSON output
@@ -325,17 +298,14 @@ static func get_sfx_config() -> Dictionary:
 ## Schema untuk Music.csv
 static func get_music_schema() -> Dictionary:
 	return {
-		"no": {"header_name": "No.", "type": "int", "default": 0, "is_id": true},
+		"script_code": {"header_name": "Script Code", "type": "string", "default": "", "is_id": true},
 		"filename": {"header_name": "Filename", "type": "string", "default": ""},
-		"offset": {"header_name": "Offset", "type": "float_range", "default": [0.0, 0.0]},
-		"script_code": {"header_name": "Script Code", "type": "string", "default": ""},
-		"penggunaan": {"header_name": "Penggunaan", "type": "string", "default": ""},
-		"desc": {"header_name": "Desc", "type": "string", "default": ""}
+		"offset": {"header_name": "Offset", "type": "float_range", "default": [0.0, 0.0]}
 	}
 
 ## Key order untuk Music JSON output
 static func get_music_key_order() -> Array:
-	return ["no", "filename", "offset", "script_code", "penggunaan", "desc"]
+	return ["filename", "offset"]
 
 ## Music parser configuration
 static func get_music_config() -> Dictionary:
@@ -344,12 +314,12 @@ static func get_music_config() -> Dictionary:
 		"group_header": "",
 		"header_row": 0,
 		"start_row": 1,
-		"id_header": "no.",
+		"id_header": "script code",
 		"metadata_header": "",
 		"metadata_value_header": "",
 		"supported_metadata_types": [],
 		"key_order": get_music_key_order(),
-		"skip_non_numeric_id": true
+		"skip_non_numeric_id": false
 	}
 
 ## Schema untuk NPC Properties CSV	
