@@ -297,21 +297,15 @@ static func get_audio_files_config() -> Dictionary:
 ## Schema untuk SFX.csv
 static func get_sfx_schema() -> Dictionary:
 	return {
-		"no": {"header_name": "No.", "type": "int", "default": 0, "is_id": true},
-		"implemented": {"header_name": "Implemented", "type": "bool", "default": false},
-		"id": {"header_name": "id", "type": "string", "default": ""},
+		"id": {"header_name": "id", "type": "string", "default": "", "is_id": true},
+		"filename": {"header_name": "file_name", "type": "array", "default": []},
 		"gain": {"header_name": "gain", "type": "float", "default": 0.0},
 		"pitch_min_max": {"header_name": "pitch_min_max", "type": "float_range", "default": [1.0, 1.0]},
-		"filename": {"header_name": "file_name", "type": "array", "default": []},
-		"desc": {"header_name": "Desc", "type": "string", "default": ""},
-		"penggunaan": {"header_name": "Penggunaan", "type": "string", "default": ""},
-		"referensi": {"header_name": "Referensi di Game", "type": "string", "default": ""},
-		"safe": {"header_name": "Safe", "type": "bool", "default": false}
 	}
 
 ## Key order untuk SFX JSON output
 static func get_sfx_key_order() -> Array:
-	return ["no", "implemented", "id", "gain", "pitch_min_max", "filename", "desc", "penggunaan", "referensi", "safe"]
+	return ["filename", "gain", "pitch_min_max"]
 
 ## SFX parser configuration
 static func get_sfx_config() -> Dictionary:
@@ -320,12 +314,12 @@ static func get_sfx_config() -> Dictionary:
 		"group_header": "",
 		"header_row": 0,
 		"start_row": 1,
-		"id_header": "no.",
+		"id_header": "id",
 		"metadata_header": "",
 		"metadata_value_header": "",
 		"supported_metadata_types": [],
 		"key_order": get_sfx_key_order(),
-		"skip_non_numeric_id": true
+		"skip_non_numeric_id": false
 	}
 
 ## Schema untuk Music.csv

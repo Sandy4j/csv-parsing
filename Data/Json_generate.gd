@@ -7,7 +7,8 @@ enum OutputFormat {
 	GROUPED,          # Nested dari group ID dengan root wrapper
 	GROUPED_NO_ROOT,  # Nested dari group ID tanpa root wrapper (langsung kategori)
 	FLAT_DICT,        # Flat dictionary
-	ARRAY             # Array of items
+	ARRAY,            # Array of items
+	ID_KEYED_DICT     # Dict dengan id sebagai key
 }
 
 # Configuration
@@ -106,7 +107,7 @@ func configure_for_audio() -> JSONGenerator:
 
 func configure_for_sfx() -> JSONGenerator:
 	key_order = DataSchemas.get_sfx_key_order()
-	output_format = OutputFormat.ARRAY
+	output_format = OutputFormat.FLAT_DICT
 	root_name = "SFX"
 	no_root_wrapper = false
 	_is_recipe_config = false
@@ -215,6 +216,8 @@ func generate_json_string(data) -> String:
 			return _stringify_flat_dict(data)
 		OutputFormat.ARRAY:
 			return _stringify_array(data)
+		OutputFormat.ID_KEYED_DICT:
+			return _stringify_id_keyed_dict(data)
 		_:
 			return _stringify_grouped(data)
 
@@ -317,6 +320,49 @@ func _stringify_flat_dict(data: Dictionary) -> String:
 	
 	var flat_data = _flatten_dict(data)
 	lines.append_array(_stringify_dict_items(flat_data, 2))
+	
+	lines.append("%s}" % indent_string)
+	lines.append("}")
+	
+	return "\n".join(lines)
+
+## Custom stringify untuk id-keyed dict format: { "id": { "field1": val, ... } }
+## id adalah key dict, value berisi field lainnya sesuai key_order
+func _stringify_id_keyed_dict(data: Dictionary) -> String:
+	var lines = []
+	lines.append("{")
+	lines.append("%s\"%s\": {" % [indent_string, root_name])
+	
+	# Flatten semua entries ke satu dict id -> row_data
+	var flat: Dictionary = {}
+	for key in data:
+		var val = data[key]
+		if val is Dictionary:
+			var first = val.values()[0] if not val.is_empty() else null
+			if first is Dictionary:
+				# grouped: { group: { id: row_data } }
+				for inner_key in val:
+					flat[inner_key] = val[inner_key]
+			else:
+				# flat: { id: row_data }
+				flat[key] = val
+		else:
+			flat[key] = val
+	
+	var ids = flat.keys()
+	for i in range(ids.size()):
+		var entry_id = ids[i]
+		var row = flat[entry_id]
+		var comma = "," if i < ids.size() - 1 else ""
+		lines.append("%s\"%s\": {" % [indent_string.repeat(2), entry_id])
+		# Output fields in key_order, skip "id" field itself
+		var ordered_fields = key_order if not key_order.is_empty() else row.keys()
+		var field_list = ordered_fields.filter(func(k): return k != "id" and row.has(k))
+		for f_idx in range(field_list.size()):
+			var field = field_list[f_idx]
+			var field_comma = "," if f_idx < field_list.size() - 1 else ""
+			lines.append("%s\"%s\": %s%s" % [indent_string.repeat(3), field, _value_to_json(row[field], 3), field_comma])
+		lines.append("%s}%s" % [indent_string.repeat(2), comma])
 	
 	lines.append("%s}" % indent_string)
 	lines.append("}")
