@@ -51,14 +51,20 @@ func process_single_csv(csv_path: String, output_path: String, csv_type: CSVConf
 		return
 	
 	# Get data
-	var data_to_export = _get_export_data(selected_groups)
+	var data_to_export = _parser.get_filtered_data(selected_groups)
+	if data_to_export.is_empty():
+		data_to_export = _parser.get_data()
 	if data_to_export.is_empty():
 		processing_error.emit(["Tidak ada data untuk diekspor."])
 		return
-	
+
 	# Generate JSON
 	processing_started.emit("Membuat JSON...")
-	_apply_root_name(root_name)
+	if root_name.is_empty():
+		_json_generator.set_no_root_wrapper(true)
+	else:
+		_json_generator.set_no_root_wrapper(false)
+		_json_generator.set_root_name(root_name)
 	
 	var fatal_array_issue: bool = _parser.has_fatal_warnings()
 	var json_string: String = ""
@@ -302,21 +308,3 @@ func process_npc_properties_csv(csv_path: String, output_path: String) -> void:
 	processing_completed.emit(true, "Berhasil! %d warna dan %d outfit types diekspor ke: %s" % [colors_count, outfit_count, output_path])
 	
 	print("[CSVProcessor] NPC Properties JSON saved to: ", output_path)
-
-
-## Dapatkan data yang akan diexport dari CSV
-func _get_export_data(selected_groups: Array) -> Dictionary:
-	var data = _parser.get_filtered_data(selected_groups)
-	
-	if data.is_empty():
-		data = _parser.get_data()
-	
-	return data
-
-
-func _apply_root_name(root_name: String) -> void:
-	if root_name.is_empty():
-		_json_generator.set_no_root_wrapper(true)
-	else:
-		_json_generator.set_no_root_wrapper(false)
-		_json_generator.set_root_name(root_name)

@@ -132,26 +132,7 @@ func _build_header_map(header_line: String) -> Dictionary:
 
 ## Parse CSV line dengan handling quote
 func _parse_csv_line(line: String) -> Array:
-	var result = []
-	var current = ""
-	var in_quotes = false
-	var i = 0
-	while i < line.length():
-		var c = line[i]
-		if c == '"':
-			if in_quotes and i + 1 < line.length() and line[i + 1] == '"':
-				current += '"'
-				i += 1
-			else:
-				in_quotes = !in_quotes
-		elif c == ',' and !in_quotes:
-			result.append(current)
-			current = ""
-		else:
-			current += c
-		i += 1
-	result.append(current)
-	return result
+	return JsonUtils.parse_csv_line(line)
 
 
 ## Process row dari Colors.csv

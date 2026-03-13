@@ -1,4 +1,4 @@
-﻿class_name DialogManager
+class_name DialogManager
 extends RefCounted
 
 ## Mengelola error dialog dan merge confirmation dialog
@@ -40,7 +40,7 @@ func _init_error_dialog() -> void:
 func _init_merge_confirmation_dialog() -> void:
 	_merge_confirmation_dialog = ConfirmationDialog.new()
 	_merge_confirmation_dialog.title = "Konfirmasi Batch Parsing"
-	_merge_confirmation_dialog.dialog_text = "Apakah file CSV dengan type INGREDIENT, RECIPE, BEVERAGE, atau DECORATION sudah dalam 1 folder?"
+	_merge_confirmation_dialog.dialog_text = "Apakah file CSV dengan type INGREDIENT, RECIPE, BEVERAGE,DECORATION dan Key Items sudah dalam 1 folder?"
 	_merge_confirmation_dialog.ok_button_text = "Ya"
 	_merge_confirmation_dialog.cancel_button_text = "Tidak"
 	_merge_confirmation_dialog.confirmed.connect(_on_merge_confirmed)

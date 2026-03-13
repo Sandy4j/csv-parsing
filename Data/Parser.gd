@@ -228,7 +228,7 @@ func parse_csv_text(csv_text: String) -> bool:
 		if line.is_empty():
 			continue
 		
-		var row = _parse_csv_line(line)
+		var row = parse_csv_line(line)
 		
 		# Cek apakah baris ini metadata
 		if _is_metadata_row(row):
@@ -276,7 +276,7 @@ func _should_skip_non_numeric_row(row: Array) -> bool:
 ## Build header map dari baris header CSV
 func _build_header_map(header_line: String) -> bool:
 	_header_map.clear()
-	var headers = _parse_csv_line(header_line)
+	var headers = parse_csv_line(header_line)
 	
 	if headers.is_empty():
 		var msg = "Header CSV kosong atau tidak valid."
@@ -290,7 +290,6 @@ func _build_header_map(header_line: String) -> bool:
 			_header_map[header_name] = i
 	
 	return true
-
 
 ## Validasi semua header yang dibutuhkan schema ada dalam CSV
 func _validate_schema_headers() -> void:
@@ -346,73 +345,7 @@ func _clear_data() -> void:
 
 ## Public wrapper untuk parsing satu baris CSV menjadi array
 func parse_csv_line(line: String) -> Array:
-	return _parse_csv_line(line)
-
-## Mengubah satu baris CSV menjadi array
-func _parse_csv_line(line: String) -> Array:
-	# Cek apakah seluruh baris dibungkus kutip ganda (bad CSV export)
-	# Contoh: "2,Amer,Alcohol,..." dimana seluruh baris dibungkus
-	var trimmed = line.strip_edges()
-	
-	# Cek apakah dimulai dan diakhiri dengan kutip
-	if trimmed.begins_with('"') and trimmed.ends_with('"') and trimmed.length() > 2:
-		# Parse normal dulu
-		var normal_result = _parse_csv_line_internal(trimmed)
-		
-		# Jika hasil normal hanya 1 kolom (seluruh baris jadi satu field),
-		# coba unwrap dan parse lagi
-		if normal_result.size() == 1:
-			var inner = trimmed.substr(1, trimmed.length() - 2)
-			# PENTING: Konversi escaped quotes dari outer wrapping
-			# Di dalam wrapped line, "" menjadi " untuk field yang dikutip
-			# Tapi kita perlu membedakan antara:
-			# - "" di awal field (opener) -> jadi "
-			# - "" di akhir field (closer) -> jadi "
-			# - "" di tengah (literal quote) -> jadi "
-			# Setelah unwrap outer, semua "" seharusnya menjadi " untuk parsing internal
-			inner = inner.replace('""', '"')
-			var unwrapped_result = _parse_csv_line_internal(inner)
-			# Jika unwrapped menghasilkan lebih banyak kolom, gunakan itu
-			if unwrapped_result.size() > normal_result.size():
-				return unwrapped_result
-		
-		# Jika jumlah kolom normal terlalu sedikit dibanding yang diharapkan
-		# dan header sudah di-parse, coba unwrap
-		if _header_map.size() > 0 and normal_result.size() < _header_map.size():
-			var inner = trimmed.substr(1, trimmed.length() - 2)
-			inner = inner.replace('""', '"')
-			var unwrapped_result = _parse_csv_line_internal(inner)
-			if unwrapped_result.size() >= _header_map.size():
-				return unwrapped_result
-		
-		return normal_result
-	
-	return _parse_csv_line_internal(line)
-
-## Internal CSV line parser
-func _parse_csv_line_internal(line: String) -> Array:
-	var result = []
-	var current_field = ""
-	var in_quotes = false
-	var i = 0
-
-	while i < line.length():
-		var c = line[i]
-		if c == '"':
-			if in_quotes and i + 1 < line.length() and line[i + 1] == '"':
-				current_field += '"'
-				i += 1
-			else:
-				in_quotes = !in_quotes
-		elif c == ',' and !in_quotes:
-			result.append(current_field)
-			current_field = ""
-		else:
-			current_field += c
-		i += 1
-
-	result.append(current_field)
-	return result
+	return JsonUtils.parse_csv_line(line)
 
 ## Mengubah satu baris CSV menjadi dictionary menggunakan Dynamic Header Mapping
 func _process_row(row: Array, row_number: int = 0) -> Dictionary:
@@ -488,11 +421,31 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 				if err is Dictionary:
 					if err.get("is_fatal", false):
 						fatal_warnings.append(err)
-					var field_name_from_err = _extract_field_name_from_context(
-						err.get("field_name", ""),
-						err.get("message", ""),
-						err.get("field_name", "")
-					)
+					# Inline _extract_field_name_from_context logic
+					var field_name_from_err = ""
+					var texts: Array = [
+						err.get("field_name", "").strip_edges(),
+						err.get("message", "").strip_edges()
+					]
+					for text in texts:
+						if text.is_empty():
+							continue
+						var kolom_idx = text.find("Kolom:")
+						if kolom_idx != -1:
+							var after_kolom = text.substr(kolom_idx + 6).strip_edges()
+							var header_idx = after_kolom.find(" (header:")
+							if header_idx != -1:
+								field_name_from_err = after_kolom.substr(0, header_idx).strip_edges()
+							else:
+								var dot_idx = after_kolom.find(".")
+								if dot_idx != -1:
+									field_name_from_err = after_kolom.substr(0, dot_idx).strip_edges()
+								else:
+									field_name_from_err = after_kolom.strip_edges()
+							break
+						else:
+							field_name_from_err = text
+							break
 					if field_name_from_err.is_empty():
 						continue
 					var detail = {"id": row_id, "column": field_name_from_err, "_pending_group": true}
@@ -539,33 +492,6 @@ func _process_row(row: Array, row_number: int = 0) -> Dictionary:
 	_apply_ingredient_icon_defaults(row, result)
 	
 	return result
-
-## Ekstrak field name dari context string
-## Context format: "Baris X [ID: Y], Kolom: fieldName (header: ...)"
-func _extract_field_name_from_context(context: Variant, message: Variant = "", fallback_field: Variant = "") -> String:
-	var texts: Array = []
-	if typeof(context) == TYPE_STRING:
-		texts.append(context.strip_edges())
-	if typeof(message) == TYPE_STRING:
-		texts.append(message.strip_edges())
-	if typeof(fallback_field) == TYPE_STRING:
-		texts.append(fallback_field.strip_edges())
-	
-	for text in texts:
-		if text.is_empty():
-			continue
-		var kolom_idx = text.find("Kolom:")
-		if kolom_idx != -1:
-			var after_kolom = text.substr(kolom_idx + 6).strip_edges()
-			var header_idx = after_kolom.find(" (header:")
-			if header_idx != -1:
-				return after_kolom.substr(0, header_idx).strip_edges()
-			var dot_idx = after_kolom.find(".")
-			if dot_idx != -1:
-				return after_kolom.substr(0, dot_idx).strip_edges()
-			return after_kolom.strip_edges()
-		return text
-	return ""
 
 ## Preview ID untuk baris (sebelum parsing penuh) menggunakan header mapping
 func _get_row_id_preview(row: Array) -> String:
@@ -717,8 +643,6 @@ func _store_metadata(row: Array) -> void:
 		_group_metadata[group_key] = {}
 	
 	_group_metadata[group_key][meta_type] = meta_value
-
-
 
 ## GET Functions
 func get_data() -> Dictionary:

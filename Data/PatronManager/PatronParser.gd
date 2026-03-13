@@ -92,28 +92,7 @@ static func get_idletalk_data(rows: Array, character_name: String, char_header: 
 	return get_story_data(rows, character_name, char_header) # Logic sama dengan story data
 
 static func _parse_csv_line_proper(line: String) -> Array:
-	var fields = []
-	var current_field = ""
-	var in_quotes = false
-	var i = 0
-	
-	while i < line.length():
-		var c = line[i]
-		if c == '"':
-			if in_quotes and i + 1 < line.length() and line[i + 1] == '"':
-				current_field += '"'
-				i += 2
-				continue
-			else:
-				in_quotes = not in_quotes
-		elif c == ',' and not in_quotes:
-			fields.append(current_field.strip_edges())
-			current_field = ""
-		else:
-			current_field += c
-		i += 1
-	fields.append(current_field.strip_edges())
-	return fields
+	return JsonUtils.parse_csv_line(line)
 
 static func _find_column_index(headers: Array, target: String) -> int:
 	for i in range(headers.size()):

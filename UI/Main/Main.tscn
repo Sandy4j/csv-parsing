@@ -93,12 +93,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="PatronsLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/PatronsContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "Patrons"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -110,12 +105,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="DialogLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/DialogContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "Dialog"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -127,12 +117,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="ItemsLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/ItemsContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "Items"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -144,12 +129,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="NPCPropertiesLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/NPCPropertiesContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "NPC Properties"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -161,12 +141,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="GameSettingsLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/GameSettingsContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "Settings"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -178,12 +153,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="SFXLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/SFXContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "SFX"
 horizontal_alignment = 1
 vertical_alignment = 1
@@ -195,12 +165,7 @@ layout_mode = 2
 size_flags_horizontal = 3
 
 [node name="MusicLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/MusicContainer"]
-layout_mode = 0
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+layout_mode = 2
 text = "Music"
 horizontal_alignment = 1
 vertical_alignment = 1

@@ -100,11 +100,11 @@ func process_character(base_dir: String, output_dir: String, selected_character:
 	if not load_result.get("success", false):
 		return load_result
 	var json_data: Dictionary = generate_character_json(load_result.get("data", {}))
-	
+
 	var save_result: Dictionary = save_character_json(output_dir, selected_character, json_data)
 	if not save_result.get("success", false):
 		return {"success": false, "errors": [save_result.get("error", "Unknown error")]}
-	
+
 	return {
 		"success": true,
 		"data": json_data,
@@ -121,71 +121,5 @@ func get_detected_file_path(file_type: String) -> String:
 const _INDENT := "\t"
 
 func _stringify_dict(data: Dictionary, indent_level: int = 0) -> String:
-	if data.is_empty():
-		return "{}"
-	
-	var lines: Array[String] = []
-	var indent := _INDENT.repeat(indent_level)
-	var inner_indent := _INDENT.repeat(indent_level + 1)
-	
-	lines.append("{")
-	var keys := data.keys()
-	for i in range(keys.size()):
-		var key = keys[i]
-		var value = data[key]
-		var comma := "," if i < keys.size() - 1 else ""
-		var value_str := _value_to_json(value, indent_level + 1)
-		lines.append("%s\"%s\": %s%s" % [inner_indent, key, value_str, comma])
-	lines.append("%s}" % indent)
-	
-	return "\n".join(lines)
-
-
-func _stringify_array(arr: Array, indent_level: int) -> String:
-	if arr.is_empty():
-		return "[]"
-	
-	var lines: Array[String] = []
-	var indent := _INDENT.repeat(indent_level)
-	var inner_indent := _INDENT.repeat(indent_level + 1)
-	
-	lines.append("[")
-	for i in range(arr.size()):
-		var item = arr[i]
-		var comma := "," if i < arr.size() - 1 else ""
-		var value_str := _value_to_json(item, indent_level + 1)
-		lines.append("%s%s%s" % [inner_indent, value_str, comma])
-	lines.append("%s]" % indent)
-	
-	return "\n".join(lines)
-
-
-func _value_to_json(value: Variant, indent_level: int = 0) -> String:
-	if value is String:
-		return "\"%s\"" % _escape_json_string(value)
-	elif value is bool:
-		return "true" if value else "false"
-	elif value is int:
-		return str(value)
-	elif value is float:
-		if is_equal_approx(value, float(int(value))):
-			return str(int(value))
-		return str(value)
-	elif value is Array:
-		return _stringify_array(value, indent_level)
-	elif value is Dictionary:
-		return _stringify_dict(value, indent_level)
-	elif value == null:
-		return "null"
-	else:
-		return "\"%s\"" % str(value)
-
-
-func _escape_json_string(s: String) -> String:
-	s = s.replace("\\", "\\\\")
-	s = s.replace("\"", "\\\"")
-	s = s.replace("\n", "\\n")
-	s = s.replace("\r", "\\r")
-	s = s.replace("\t", "\\t")
-	return s
+	return JsonUtils.stringify_dict(data, _INDENT)
 #endregion

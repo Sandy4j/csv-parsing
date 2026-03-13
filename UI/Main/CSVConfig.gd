@@ -229,6 +229,9 @@ static func _matches_pattern(header: String, pattern: Array) -> bool:
 
 ## Configure parser berdasarkan tipe CSV
 static func configure_parser(parser: Node, csv_type: CSVType) -> void:
+	if parser == null:
+		return
+
 	match csv_type:
 		CSVType.INGREDIENT:
 			parser.configure_for_ingredient()
@@ -256,6 +259,9 @@ static func configure_parser(parser: Node, csv_type: CSVType) -> void:
 
 ## Configure generator berdasarkan tipe CSV
 static func configure_generator(generator: Node, csv_type: CSVType) -> void:
+	if generator == null:
+		return
+
 	match csv_type:
 		CSVType.INGREDIENT:
 			generator.configure_for_ingredient()
