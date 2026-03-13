@@ -16,6 +16,10 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 2
 
@@ -52,80 +56,154 @@ text = "Open JSON Viewer"
 [node name="HSeparator" type="HSeparator" parent="Panel/VBoxContainer"]
 layout_mode = 2
 
-[node name="FileTypeSection" type="VBoxContainer" parent="Panel/VBoxContainer"]
-layout_mode = 2
-
-[node name="FileTypeLabel" type="Label" parent="Panel/VBoxContainer/FileTypeSection"]
-layout_mode = 2
-text = "Select File Type:"
-
-[node name="FileTypeButtons" type="HBoxContainer" parent="Panel/VBoxContainer/FileTypeSection"]
+[node name="BrowseSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="PatronsButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
+[node name="BrowseButton" type="Button" parent="Panel/VBoxContainer/BrowseSection"]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(120, 40)
 layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "Patrons"
+text = "Browse CSV"
 
-[node name="DialogButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
+[node name="FilePathEdit" type="LineEdit" parent="Panel/VBoxContainer/BrowseSection"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 40)
 layout_mode = 2
 size_flags_horizontal = 3
-toggle_mode = true
-text = "Dialog"
+placeholder_text = "Pilih Csv File"
+editable = false
 
-[node name="ItemsButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "Items"
-
-[node name="NPCPropertiesButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "NPC Properties"
-
-[node name="GameSettingsButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "Settings"
-
-[node name="SFXButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "SFX"
-
-[node name="MusicButton" type="Button" parent="Panel/VBoxContainer/FileTypeSection/FileTypeButtons"]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(120, 40)
-layout_mode = 2
-size_flags_horizontal = 3
-toggle_mode = true
-text = "Music"
-
-[node name="FilePathEdit" type="LineEdit" parent="Panel/VBoxContainer"]
-unique_name_in_owner = true
+[node name="TypeDetectionSection" type="VBoxContainer" parent="Panel/VBoxContainer"]
 visible = false
 layout_mode = 2
+theme_override_constants/separation = 5
+
+[node name="DetectedTypeLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection"]
+layout_mode = 2
+text = "Detected Type:"
+
+[node name="FileTypeButtons" type="HBoxContainer" parent="Panel/VBoxContainer/TypeDetectionSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="PatronsContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "Select CSV file..."
-editable = false
+
+[node name="PatronsLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/PatronsContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Patrons"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="DialogContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="DialogLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/DialogContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Dialog"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ItemsContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="ItemsLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/ItemsContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Items"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="NPCPropertiesContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="NPCPropertiesLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/NPCPropertiesContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "NPC Properties"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="GameSettingsContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="GameSettingsLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/GameSettingsContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Settings"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="SFXContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SFXLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/SFXContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "SFX"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MusicContainer" type="PanelContainer" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(120, 40)
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="MusicLabel" type="Label" parent="Panel/VBoxContainer/TypeDetectionSection/FileTypeButtons/MusicContainer"]
+layout_mode = 0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+text = "Music"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="OutputSection" type="HBoxContainer" parent="Panel/VBoxContainer"]
 layout_mode = 2
@@ -139,7 +217,7 @@ text = "Output JSON:"
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
-placeholder_text = "Select output location..."
+placeholder_text = "Pilih Lokasi Output...."
 editable = false
 
 [node name="OutputBrowseButton" type="Button" parent="Panel/VBoxContainer/OutputSection"]
